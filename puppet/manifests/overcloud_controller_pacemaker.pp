@@ -15,7 +15,7 @@
 
 class pcmk_node_tag_controller($node) {
   define process_property {
-    pacemaker::property { "property $name":
+    pacemaker::property { "property $node-$name":
       property => 'osprole',
       value    => 'controller',
     }
@@ -25,7 +25,7 @@ class pcmk_node_tag_controller($node) {
 
 class pcmk_node_tag_compute($node) {
   define process_property {
-    pacemaker::property { "property $name":
+    pacemaker::property { "property $node-$name":
       property => 'osprole',
       value    => 'compute',
     }
@@ -35,7 +35,7 @@ class pcmk_node_tag_compute($node) {
 
 class pcmk_node_stonith_compute($node) {
   define process_property {
-    exec { "property stonith $name":
+    exec { "property stonith $node-$name":
       command => "/usr/sbin/pcs stonith level add 1 stonith-fence_xvm-${name} ${name},fence-nova",
       onlyif  => "/usr/sbin/pcs stonith level | grep -v ${name}",
       require => [ Exec["wait-for-settle"],
@@ -2163,7 +2163,7 @@ if hiera('step') >= 4 {
       resource_params => "auth_url=${pacemaker_admin_uri} username=admin password=${admin_password} tenant_name=admin no_shared_storage=1",
     }
     pacemaker::constraint::location_rule { "nova-evacuate-controller":
-      resource           => 'nova-evacuate'
+      resource           => 'nova-evacuate',
       expression         => 'role eq controller',
       resource_discovery => 'exclusive',
       score              => 0,
