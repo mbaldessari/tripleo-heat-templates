@@ -543,6 +543,10 @@ parameters:
     default: false
     description: Should MongoDb journaling be disabled
     type: boolean
+  PacemakerRemotePassword:
+    type: string
+    description: Auth key for Pacemaker Remote
+    hidden: true
   NtpServer:
     default: ''
     description: Comma-separated list of ntp servers
@@ -1106,6 +1110,7 @@ resources:
               - '/nova'
         instance_name_template: {get_param: InstanceNameTemplate}
         fencing_config: {get_param: FencingConfig}
+        pacemaker_remote_password: {get_param: PacemakerRemotePassword}
         pcsd_password: {get_param: PcsdPassword}
         rabbit_username: {get_param: RabbitUserName}
         rabbit_password: {get_param: RabbitPassword}
@@ -1229,6 +1234,8 @@ resources:
                 enable_fencing: {get_input: enable_fencing}
                 enable_load_balancer: {get_input: enable_load_balancer}
                 hacluster_pwd: {get_input: pcsd_password}
+                pacemaker_remote_pwd: {get_input: pacemaker_remote_password}
+                pacemaker_admin_uri: {get_input: keystone_auth_uri}
                 tripleo::fencing::config: {get_input: fencing_config}
 
                 # Swift

@@ -228,6 +228,10 @@ parameters:
     default: ''
     description: Comma-separated list of ntp servers
     type: comma_delimited_list
+  PacemakerRemotePassword:
+    type: string
+    description: Auth key for Pacemaker Remote
+    hidden: true
   RabbitHost:
     type: string
     default: ''  # Has to be here because of the ignored empty value bug
@@ -512,6 +516,7 @@ resources:
                 keystone_public_api_virtual_ip: {get_input: keystone_vip}
                 admin_password: {get_input: admin_password}
                 ntp::servers: {get_input: ntp_servers}
+                pacemaker_remote_pwd: {get_input: pacemaker_remote_password}
                 timezone::timezone: {get_input: timezone}
                 tripleo::packages::enable_install: {get_input: enable_package_install}
                 tripleo::packages::enable_upgrade: {get_input: enable_package_upgrade}
@@ -524,6 +529,7 @@ resources:
       config: {get_resource: NovaComputeConfig}
       server: {get_resource: NovaCompute}
       input_values:
+        pacemaker_remote_password: {get_param: PacemakerRemotePassword}
         cinder_enable_nfs_backend: {get_param: CinderEnableNfsBackend}
         debug: {get_param: Debug}
         nova_compute_driver: {get_param: NovaComputeDriver}
