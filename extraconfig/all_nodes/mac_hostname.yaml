@@ -114,9 +114,38 @@ resources:
         cephstorage_mappings: {get_attr: [CollectMacDeploymentsCephStorage, deploy_stdouts]}
       actions: ['CREATE'] # Only do this on CREATE
 
+  DistributeMacAddressConfig:
+    type: OS::Heat::SoftwareDeployments
+    properties:
+      servers:  {get_param: controller_servers}
+      config: {get_resource: MacAddressConfig}
+      input_values:
+        controller_mappings: {get_attr: [CollectMacDeploymentsController, deploy_stdouts]}
+        compute_mappings: {get_attr: [CollectMacDeploymentsCompute, deploy_stdouts]}
+        blockstorage_mappings: {get_attr: [CollectMacDeploymentsBlockStorage, deploy_stdouts]}
+        objectstorage_mappings: {get_attr: [CollectMacDeploymentsObjectStorage, deploy_stdouts]}
+        cephstorage_mappings: {get_attr: [CollectMacDeploymentsCephStorage, deploy_stdouts]}
+      actions: ['CREATE'] # Only do this on CREATE
+
+  MacAddressConfig:
+    type: OS::Heat::StructuredConfig
+    properties:
+      group: os-apply-config
+      config:
+        hiera:
+          datafiles:
+            controller_extraconfig:
+              mapped_data:
+                controller_map: {get_attr: [CollectMacDeploymentsController, deploy_stdouts]}
+                compute_map: {get_attr: [CollectMacDeploymentsCompute, deploy_stdouts]}
+                blockstorage_map: {get_attr: [CollectMacDeploymentsBlockStorage, deploy_stdouts]}
+                objectstorage_map: {get_attr: [CollectMacDeploymentsObjectStorage, deploy_stdouts]}
+                cephstorage_map: {get_attr: [CollectMacDeploymentsCephStorage, deploy_stdouts]}
+
 outputs:
   # This value should change if the configuration data has changed
   # It is used to e.g re-apply puppet after hieradata values change.
   config_identifier:
     value: {get_attr: [DistributeMacDeploymentsController, deploy_stdouts]}
+    value: {get_attr: [DistributeMacAddressConfig, deploy_stdouts]}
 
