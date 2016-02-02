@@ -13,6 +13,16 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+class pcmk_node_tag_controller($node) {
+  define process_property {
+    pacemaker::property { "property $name":
+      property => 'osprole',
+      value    => 'controller',
+    }
+  }
+  process_property { $node: } 
+}
+
 Pcmk_resource <| |> {
   tries     => 10,
   try_sleep => 3,
@@ -69,6 +79,7 @@ if hiera('step') >= 1 {
   class { '::pacemaker::corosync':
     cluster_members => $pacemaker_cluster_members,
     setup_cluster   => $pacemaker_master,
+    remote_authkey  => hiera('pacemaker_remote_pwd'),
   }
   class { '::pacemaker::stonith':
     disable => !$enable_fencing,
@@ -79,6 +90,12 @@ if hiera('step') >= 1 {
     # enable stonith after all fencing devices have been created
     Class['tripleo::fencing'] -> Class['pacemaker::stonith']
   }
+
+  # Step 11 - pacemaker puppet module does not have a property class unfortunately
+  class { "pcmk_node_tag_controller":
+    node => $controller_node_names,
+  }
+
 
   # FIXME(gfidente): sets 200secs as default start timeout op
   # param; until we can use pcmk global defaults we'll still
@@ -194,10 +211,24 @@ if hiera('step') >= 2 {
       pacemaker::resource::service { 'haproxy':
         clone_params => true,
       }
+      pacemaker::constraint::location_rule { 'haproxy-controller':
+        resource           => Pacemaker::Resource::Service['haproxy'],
+        expression         => 'role eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Service['haproxy'],
+      }
 
       $control_vip = hiera('tripleo::loadbalancer::controller_virtual_ip')
       pacemaker::resource::ip { 'control_vip':
         ip_address => $control_vip,
+      }
+      pacemaker::constraint::location_rule { 'controller_vip-ctrl':
+        resource           => Pacemaker::Resource::Service['control_vip'],
+        expression         => 'role eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Service['control_vip'],
       }
       pacemaker::constraint::base { 'control_vip-then-haproxy':
         constraint_type   => 'order',
@@ -221,6 +252,13 @@ if hiera('step') >= 2 {
       if $public_vip and $public_vip != $control_vip {
         pacemaker::resource::ip { 'public_vip':
           ip_address => $public_vip,
+        }
+        pacemaker::constraint::location_rule { 'public_vip-ctrl':
+          resource           => Pacemaker::Resource::Service['public_vip'],
+          expression         => 'role eq controller',
+          resource_discovery => 'exclusive',
+          score              => 0,
+          require            => Pacemaker::Resource::Service['public_vip'],
         }
         pacemaker::constraint::base { 'public_vip-then-haproxy':
           constraint_type   => 'order',
@@ -246,6 +284,13 @@ if hiera('step') >= 2 {
         pacemaker::resource::ip { 'redis_vip':
           ip_address => $redis_vip,
         }
+        pacemaker::constraint::location_rule { 'redis_vip-ctrl':
+          resource           => Pacemaker::Resource::Service['redis_vip'],
+          expression         => 'role eq controller',
+          resource_discovery => 'exclusive',
+          score              => 0,
+          require            => Pacemaker::Resource::Service['redis_vip'],
+        }
         pacemaker::constraint::base { 'redis_vip-then-haproxy':
           constraint_type   => 'order',
           first_resource    => "ip-${redis_vip}",
@@ -269,6 +314,13 @@ if hiera('step') >= 2 {
       if $internal_api_vip and $internal_api_vip != $control_vip {
         pacemaker::resource::ip { 'internal_api_vip':
           ip_address => $internal_api_vip,
+        }
+        pacemaker::constraint::location_rule { 'internal_vip-ctrl':
+          resource           => Pacemaker::Resource::Service['internal_vip'],
+          expression         => 'role eq controller',
+          resource_discovery => 'exclusive',
+          score              => 0,
+          require            => Pacemaker::Resource::Service['internal_vip'],
         }
         pacemaker::constraint::base { 'internal_api_vip-then-haproxy':
           constraint_type   => 'order',
@@ -294,6 +346,13 @@ if hiera('step') >= 2 {
         pacemaker::resource::ip { 'storage_vip':
           ip_address => $storage_vip,
         }
+        pacemaker::constraint::location_rule { 'storage_vip-ctrl':
+          resource           => Pacemaker::Resource::Service['storage_vip'],
+          expression         => 'role eq controller',
+          resource_discovery => 'exclusive',
+          score              => 0,
+          require            => Pacemaker::Resource::Service['storage_vip'],
+        }
         pacemaker::constraint::base { 'storage_vip-then-haproxy':
           constraint_type   => 'order',
           first_resource    => "ip-${storage_vip}",
@@ -317,6 +376,13 @@ if hiera('step') >= 2 {
       if $storage_mgmt_vip and $storage_mgmt_vip != $control_vip {
         pacemaker::resource::ip { 'storage_mgmt_vip':
           ip_address => $storage_mgmt_vip,
+        }
+        pacemaker::constraint::location_rule { 'storage_mgmt_vip-ctrl':
+          resource           => Pacemaker::Resource::Service['storage_mgmt_vip'],
+          expression         => 'role eq controller',
+          resource_discovery => 'exclusive',
+          score              => 0,
+          require            => Pacemaker::Resource::Service['storage_mgmt_vip'],
         }
         pacemaker::constraint::base { 'storage_mgmt_vip-then-haproxy':
           constraint_type   => 'order',
