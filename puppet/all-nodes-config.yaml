@@ -4,6 +4,8 @@ description: 'All Nodes Config for Puppet'
 parameters:
   compute_hosts:
     type: comma_delimited_list
+  compute_names:
+    type: comma_delimited_list
   controller_hosts:
     type: comma_delimited_list
   controller_ips:
@@ -95,6 +97,10 @@ resources:
               raw_data: {get_file: hieradata/RedHat.yaml}
             all_nodes:
               mapped_data:
+                compute_node_names:
+                  list_join:
+                  - ','
+                  - {get_param: compute_names}
                 controller_node_ips:
                   list_join:
                   - ','

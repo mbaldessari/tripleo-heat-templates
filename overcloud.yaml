@@ -1173,6 +1173,7 @@ resources:
     type: OS::TripleO::AllNodes::SoftwareConfig
     properties:
       compute_hosts: {get_attr: [Compute, hosts_entry]}
+      compute_names: {get_attr: [Compute, hostname]}
       controller_hosts: {get_attr: [Controller, hosts_entry]}
       controller_ips: {get_attr: [Controller, ip_address]}
       block_storage_hosts: {get_attr: [BlockStorage, hosts_entry]}
