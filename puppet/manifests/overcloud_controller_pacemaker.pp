@@ -23,6 +23,28 @@ class pcmk_node_tag_controller($node) {
   process_property { $node: } 
 }
 
+class pcmk_node_tag_compute($node) {
+  define process_property {
+    pacemaker::property { "property $name":
+      property => 'osprole',
+      value    => 'compute',
+    }
+  }
+  process_property { $node: } 
+}
+
+class pcmk_node_stonith_compute($node) {
+  define process_property {
+    exec { "property stonith $name":
+      command => "/usr/sbin/pcs stonith level add 1 stonith-fence_xvm-${name} ${name},fence-nova",
+      onlyif  => "/usr/sbin/pcs stonith level | grep -v ${name}",
+      require => [ Exec["wait-for-settle"],
+                   Class['::pacemaker::corosync']],
+    }
+  }
+  process_property { $node: } 
+}
+
 Pcmk_resource <| |> {
   tries     => 10,
   try_sleep => 3,
@@ -1159,6 +1181,13 @@ if hiera('step') >= 4 {
                             File['/etc/keystone/ssl/private/signing_key.pem'],
                             File['/etc/keystone/ssl/certs/signing_cert.pem']],
     }
+    pacemaker::constraint::location_rule { "${::keystone::params::service_name}-controller":
+      resource           => "${::keystone::params::service_name}-clone",
+      expression         => 'role eq controller',
+      resource_discovery => 'exclusive',
+      score              => 0,
+      require            => Pacemaker::Resource::Service[$::keystone::params::service_name],
+    }
     if $enable_load_balancer {
       pacemaker::constraint::base { 'haproxy-then-keystone-constraint':
         constraint_type => 'order',
@@ -1203,10 +1232,31 @@ if hiera('step') >= 4 {
       clone_params => 'interleave=true',
       require      => Pacemaker::Resource::Service[$::keystone::params::service_name],
     }
+    pacemaker::constraint::location_rule { "${::cinder::params::api_service}-controller":
+      resource           => "${::cinder::params::api_service}-clone",
+      expression         => 'role eq controller',
+      resource_discovery => 'exclusive',
+      score              => 0,
+      require            => Pacemaker::Resource::Service[$::cinder::params::api_service],
+    }
     pacemaker::resource::service { $::cinder::params::scheduler_service :
       clone_params => 'interleave=true',
     }
+    pacemaker::constraint::location_rule { "${::cinder::params::scheduler_service}-controller":
+      resource           => "${::cinder::params::scheduler_service}-clone",
+      expression         => 'role eq controller',
+      resource_discovery => 'exclusive',
+      score              => 0,
+      require            => Pacemaker::Resource::Service[$::cinder::params::scheduler_service],
+    }
     pacemaker::resource::service { $::cinder::params::volume_service : }
+    pacemaker::constraint::location_rule { "${::cinder::params::volume_service}-controller":
+      resource           => "${::cinder::params::volume_service}-clone",
+      expression         => 'role eq controller',
+      resource_discovery => 'exclusive',
+      score              => 0,
+      require            => Pacemaker::Resource::Service[$::cinder::params::volume_service],
+    }
 
     pacemaker::constraint::base { 'keystone-then-cinder-api-constraint':
       constraint_type => 'order',
@@ -1273,8 +1323,22 @@ if hiera('step') >= 4 {
       clone_params => 'interleave=true',
       require      => Pacemaker::Resource::Service[$::keystone::params::service_name],
     }
+    pacemaker::constraint::location_rule { "${::glance::params::registry_service_name}-controller":
+      resource           => "${::glance::params::registry_service_name}-clone",
+      expression         => 'role eq controller',
+      resource_discovery => 'exclusive',
+      score              => 0,
+      require            => Pacemaker::Resource::Service[$::glance::params::registry_service_name],
+    }
     pacemaker::resource::service { $::glance::params::api_service_name :
       clone_params => 'interleave=true',
+    }
+    pacemaker::constraint::location_rule { "${::glance::params::api_service_name}-controller":
+      resource           => "${::glance::params::api_service_name}-clone",
+      expression         => 'role eq controller',
+      resource_discovery => 'exclusive',
+      score              => 0,
+      require            => Pacemaker::Resource::Service[$::glance::params::api_service_name],
     }
 
     pacemaker::constraint::base { 'keystone-then-glance-registry-constraint':
@@ -1330,29 +1394,71 @@ if hiera('step') >= 4 {
         require      => Pacemaker::Resource::Service[$::keystone::params::service_name]
       }
     }
+    pacemaker::constraint::location_rule { "${::neutron::params::server_service}-controller":
+      resource           => "${::neutron::params::server_service}-clone",
+      expression         => 'role eq controller',
+      resource_discovery => 'exclusive',
+      score              => 0,
+      require            => Pacemaker::Resource::Service[$::neutron::params::server_service],
+    }
     if hiera('neutron::enable_l3_agent', true) {
       pacemaker::resource::service { $::neutron::params::l3_agent_service:
         clone_params => 'interleave=true',
+      }
+      pacemaker::constraint::location_rule { "${::neutron::params::l3_agent_service}-controller":
+        resource           => "${::neutron::params::l3_agent_service}-clone",
+        expression         => 'role eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Service[$::neutron::params::l3_agent_service],
       }
     }
     if hiera('neutron::enable_dhcp_agent', true) {
       pacemaker::resource::service { $::neutron::params::dhcp_agent_service:
         clone_params => 'interleave=true',
       }
+      pacemaker::constraint::location_rule { "${::neutron::params::dhcp_agent_service}-controller":
+        resource           => "${::neutron::params::dhcp_agent_service}-clone",
+        expression         => 'role eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Service[$::neutron::params::dhcp_agent_service],
+      }
     }
     if hiera('neutron::enable_ovs_agent', true) {
       pacemaker::resource::service { $::neutron::params::ovs_agent_service:
         clone_params => 'interleave=true',
+      }
+      pacemaker::constraint::location_rule { "${::neutron::params::ovs_agent_service}-controller":
+        resource           => "${::neutron::params::ovs_agent_service}-clone",
+        expression         => 'role eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Service[$::neutron::params::ovs_agent_service],
       }
     }
     if hiera('neutron::core_plugin') == 'midonet.neutron.plugin_v1.MidonetPluginV2' {
       pacemaker::resource::service {'tomcat':
         clone_params => 'interleave=true',
       }
+      pacemaker::constraint::location_rule { "tomcat-controller":
+        resource           => 'tomcat-clone',
+        expression         => 'role eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => 'tomcat',
+      }
     }
     if hiera('neutron::enable_metadata_agent', true) {
       pacemaker::resource::service { $::neutron::params::metadata_agent_service:
         clone_params => 'interleave=true',
+      }
+      pacemaker::constraint::location_rule { "${::neutron::params::metadata_agent_service}-controller":
+        resource           => "${::neutron::params::metadata_agent_service}-clone",
+        expression         => 'role eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Service[$::neutron::params::metadata_agent_service],
       }
     }
     if hiera('neutron::enable_ovs_agent', true) {
@@ -1360,9 +1466,23 @@ if hiera('step') >= 4 {
         ocf_agent_name => 'neutron:OVSCleanup',
         clone_params   => 'interleave=true',
       }
+      pacemaker::constraint::location_rule { "${::neutron::params::ovs_cleanup_service}-controller":
+        resource           => "${::neutron::params::ovs_cleanup_service}-clone",
+        expression         => 'role eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Service[$::neutron::params::ovs_cleanup_service],
+      }
       pacemaker::resource::ocf { 'neutron-netns-cleanup':
         ocf_agent_name => 'neutron:NetnsCleanup',
         clone_params   => 'interleave=true',
+      }
+      pacemaker::constraint::location_rule { "neutron-netns-cleanup-controller":
+        resource           => 'neutron-netns-cleanup-clone',
+        expression         => 'role eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => 'neutron-netns-cleanup',
       }
 
       # neutron - one chain ovs-cleanup-->netns-cleanup-->ovs-agent
@@ -1399,6 +1519,132 @@ if hiera('step') >= 4 {
                     Pacemaker::Resource::Service[$::neutron::params::ovs_agent_service]],
       }
     }
+
+    # 14.1 neutron agent running on compute
+    pacemaker::resource::service { "${::neutron::params::ovs_agent_service}-compute":
+      service_name => "${::neutron::params::ovs_agent_service}",
+      clone_params => "interleave=true",
+    } -> exec {  "${::neutron::params::ovs_agent_service}-location-compute":  
+      command => "/usr/sbin/pcs constraint location ${::neutron::params::ovs_agent_service}-compute-clone rule resource-discovery=exclusive score=0 osprole eq compute",
+      unless  => "/usr/sbin/pcs constraint location show | grep ${::neutron::params::ovs_agent_service}-compute-clone > /dev/null 2>&1",
+    }
+    pacemaker::constraint::base { "${::neutron::params::server_service}-then-${::neutron::params::ovs_agent_service}-compute":
+      constraint_type   => 'order',
+      first_resource    => "${::neutron::params::server_service}-clone",
+      second_resource   => "${::neutron::params::ovs_agent_service}-compute-clone",
+      first_action      => 'start',
+      second_action     => 'start',
+      constraint_params => 'require-all=false',
+      require => [Pacemaker::Resource::Service[$::neutron::params::server_service],
+                  Pacemaker::Resource::Service["${::neutron::params::ovs_agent_service}-compute"]],
+    }
+
+    # 14.2 libvirtd agent running on compute
+    pacemaker::resource::service { "libvirtd-compute":
+      service_name => "libvirtd",
+      clone_params => "interleave=true",
+    } -> exec {  "libvirtd-location-compute":  
+      command => "/usr/sbin/pcs constraint location libvirtd-compute-clone rule resource-discovery=exclusive score=0 osprole eq compute",
+      unless  => "/usr/sbin/pcs constraint location show | grep libvirtd-compute-clone > /dev/null 2>&1",
+    }
+    pacemaker::constraint::base { "${::neutron::params::ovs_agent_service}-compute-then-libvirtd-compute":
+      constraint_type   => 'order',
+      first_resource    => "${::neutron::params::ovs_agent_service}-compute-clone",
+      second_resource   => 'libvirtd-compute-clone',
+      first_action      => 'start',
+      second_action     => 'start',
+      require => [Pacemaker::Resource::Service["libvirtd-compute"],
+                  Pacemaker::Resource::Service["${::neutron::params::ovs_agent_service}-compute"]],
+    } 
+    pacemaker::constraint::colocation { "${::neutron::params::ovs_agent_service}-compute-with-libvirtd-compute":
+      source  => 'libvirtd-compute-clone',
+      target  => "${::neutron::params::ovs_agent_service}-compute-clone",
+      score   => 'INFINITY',
+      require => [Pacemaker::Resource::Service["libvirtd-compute"],
+                  Pacemaker::Resource::Service["${::neutron::params::ovs_agent_service}-compute"]],
+    } 
+
+    # 14.3 openstack-ceilometer-compute running on compute
+    pacemaker::resource::service { "openstack-ceilometer-compute":
+      clone_params => "interleave=true",
+    } -> exec {  "openstack-ceilometer-compute-location-compute":  
+      command => "/usr/sbin/pcs constraint location openstack-ceilometer-compute-clone rule resource-discovery=exclusive score=0 osprole eq compute",
+      unless  => "/usr/sbin/pcs constraint location show | grep openstack-ceilometer-compute-clone > /dev/null 2>&1",
+    }
+    pacemaker::constraint::base { "${::ceilometer::params::agent_notification_service_name}-then-openstack-ceilometer-compute":
+      constraint_type   => 'order',
+      first_resource    => "${::ceilometer::params::agent_notification_service_name}-clone",
+      second_resource   => 'openstack-ceilometer-compute-clone',
+      first_action      => 'start',
+      second_action     => 'start',
+      constraint_params => 'require-all=false',
+      require => [Pacemaker::Resource::Service["openstack-ceilometer-compute"],
+                  Pacemaker::Resource::Service[$::ceilometer::params::agent_notification_service_name]],
+    }
+    pacemaker::constraint::base { "libvirtd-compute-clone-then-openstack-ceilometer-compute":
+      constraint_type   => 'order',
+      first_resource    => "libvirtd-compute-clone",
+      second_resource   => 'openstack-ceilometer-compute-clone',
+      first_action      => 'start',
+      second_action     => 'start',
+      require => [Pacemaker::Resource::Service["openstack-ceilometer-compute"],
+                  Pacemaker::Resource::Service["libvirtd-compute"]],
+    }
+    pacemaker::constraint::colocation { "openstack-ceilometer-compute-with-libvirtd-compute":
+      source  => 'openstack-ceilometer-compute-clone',
+      target  => "libvirtd-compute-clone",
+      score   => 'INFINITY',
+      require => [Pacemaker::Resource::Service["openstack-ceilometer-compute"],
+                  Pacemaker::Resource::Service["libvirtd-compute"]],
+    } 
+
+    # 14.4 nova-compute
+    pacemaker::resource::ocf { 'nova-compute' :
+      ocf_agent_name  => 'openstack:NovaCompute',
+      clone_params    => 'interleave=true',
+      resource_params => "auth_url=${pacemaker_admin_uri} username=admin password=${admin_password} tenant_name=admin domain=localdomain op start timeout=300",
+      require => Pacemaker::Resource::Service["libvirtd-compute"],
+    } -> exec {  "nova-compute-location":  
+      command => "/usr/sbin/pcs constraint location nova-compute-clone rule resource-discovery=exclusive score=0 osprole eq compute",
+      unless  => "/usr/sbin/pcs constraint location show | grep nova-compute-clone > /dev/null 2>&1",
+    }
+    pacemaker::constraint::base { "${::nova::params::conductor_service_name}-then-nova-compute":
+      constraint_type   => 'order',
+      first_resource    => "${::nova::params::conductor_service_name}-clone",
+      second_resource   => 'nova-compute-clone',
+      first_action      => 'start',
+      second_action     => 'start',
+      constraint_params => 'require-all=false',
+      require => [Pacemaker::Resource::Ocf['nova-evacuate'],
+                  Pacemaker::Resource::Service[$::nova::params::conductor_service_name]],
+    }
+    pacemaker::constraint::base { "nova-compute-clone-then-nova-evacuate":
+      constraint_type   => 'order',
+      first_resource    => "nova-compute-clone",
+      second_resource   => 'nova-evacuate',
+      first_action      => 'start',
+      second_action     => 'start',
+      constraint_params => 'require-all=false',
+      require => [Pacemaker::Resource::Ocf["nova-compute"],
+                  Pacemaker::Resource::Ocf["nova-evacuate"]],
+    }
+    pacemaker::constraint::base { "libvirtd-compute-clone-then-nova-compute":
+      constraint_type   => 'order',
+      first_resource    => "libvirtd-compute-clone",
+      second_resource   => 'nova-compute-clone',
+      first_action      => 'start',
+      second_action     => 'start',
+      require => [Pacemaker::Resource::Ocf["nova-compute"],
+                  Pacemaker::Resource::Service["libvirtd-compute"]],
+    }
+    pacemaker::constraint::colocation { "nova-compute-with-libvirtd-compute":
+      source  => 'nova-compute-clone',
+      target  => "libvirtd-compute-clone",
+      score   => 'INFINITY',
+      require => [Pacemaker::Resource::Ocf["nova-compute"],
+                  Pacemaker::Resource::Service["libvirtd-compute"]],
+    } 
+
 
     pacemaker::constraint::base { 'keystone-to-neutron-server-constraint':
       constraint_type => 'order',
@@ -1518,22 +1764,57 @@ if hiera('step') >= 4 {
       clone_params => 'interleave=true',
       op_params    => 'start timeout=200s stop timeout=200s monitor start-delay=10s',
     }
+    pacemaker::constraint::location_rule { "${::nova::params::api_service_name}-controller":
+      resource           => "${::nova::params::api_service_name}-clone",
+      expression         => 'role eq controller',
+      resource_discovery => 'exclusive',
+      score              => 0,
+      require            => Pacemaker::Resource::Service[$::nova::params::api_service_name],
+    }
     pacemaker::resource::service { $::nova::params::conductor_service_name :
       clone_params => 'interleave=true',
       op_params    => 'start timeout=200s stop timeout=200s monitor start-delay=10s',
+    }
+    pacemaker::constraint::location_rule { "${::nova::params::conductor_service_name}-controller":
+      resource           => "${::nova::params::conductor_service_name}-clone",
+      expression         => 'role eq controller',
+      resource_discovery => 'exclusive',
+      score              => 0,
+      require            => Pacemaker::Resource::Service[$::nova::params::conductor_service_name],
     }
     pacemaker::resource::service { $::nova::params::consoleauth_service_name :
       clone_params => 'interleave=true',
       op_params    => 'start timeout=200s stop timeout=200s monitor start-delay=10s',
       require      => Pacemaker::Resource::Service[$::keystone::params::service_name],
     }
+    pacemaker::constraint::location_rule { "${::nova::params::consoleauth_service_name}-controller":
+      resource           => "${::nova::params::consoleauth_service_name}-clone",
+      expression         => 'role eq controller',
+      resource_discovery => 'exclusive',
+      score              => 0,
+      require            => Pacemaker::Resource::Service[$::nova::params::consoleauth_service_name],
+    }
     pacemaker::resource::service { $::nova::params::vncproxy_service_name :
       clone_params => 'interleave=true',
       op_params    => 'start timeout=200s stop timeout=200s monitor start-delay=10s',
     }
+    pacemaker::constraint::location_rule { "${::nova::params::vncproxy_service_name}-controller":
+      resource           => "${::nova::params::vncproxy_service_name}-clone",
+      expression         => 'role eq controller',
+      resource_discovery => 'exclusive',
+      score              => 0,
+      require            => Pacemaker::Resource::Service[$::nova::params::vncproxy_service_name],
+    }
     pacemaker::resource::service { $::nova::params::scheduler_service_name :
       clone_params => 'interleave=true',
       op_params    => 'start timeout=200s stop timeout=200s monitor start-delay=10s',
+    }
+    pacemaker::constraint::location_rule { "${::nova::params::scheduler_service_name}-controller":
+      resource           => "${::nova::params::scheduler_service_name}-clone",
+      expression         => 'role eq controller',
+      resource_discovery => 'exclusive',
+      score              => 0,
+      require            => Pacemaker::Resource::Service[$::nova::params::scheduler_service_name],
     }
 
     pacemaker::constraint::base { 'keystone-then-nova-consoleauth-constraint':
@@ -1626,19 +1907,54 @@ if hiera('step') >= 4 {
         }
       }
     }
+    pacemaker::constraint::location_rule { "${::ceilometer::params::agent_central_service_name}-controller":
+      resource           => "${::ceilometer::params::agent_central_service_name}-clone",
+      expression         => 'role eq controller',
+      resource_discovery => 'exclusive',
+      score              => 0,
+      require            => Pacemaker::Resource::Service[$::ceilometer::params::agent_central_service_name],
+    }
     pacemaker::resource::service { $::ceilometer::params::collector_service_name :
       clone_params => 'interleave=true',
+    }
+    pacemaker::constraint::location_rule { "${::ceilometer::params::collector_service_name}-controller":
+      resource           => "${::ceilometer::params::collector_service_name}-clone",
+      expression         => 'role eq controller',
+      resource_discovery => 'exclusive',
+      score              => 0,
+      require            => Pacemaker::Resource::Service[$::ceilometer::params::collector_service_name],
     }
     pacemaker::resource::service { $::ceilometer::params::api_service_name :
       clone_params => 'interleave=true',
     }
+    pacemaker::constraint::location_rule { "${::ceilometer::params::api_service_name}-controller":
+      resource           => "${::ceilometer::params::api_service_name}-clone",
+      expression         => 'role eq controller',
+      resource_discovery => 'exclusive',
+      score              => 0,
+      require            => Pacemaker::Resource::Service[$::ceilometer::params::api_service_name],
+    }
     pacemaker::resource::service { $::ceilometer::params::agent_notification_service_name :
       clone_params => 'interleave=true',
+    }
+    pacemaker::constraint::location_rule { "${::ceilometer::params::agent_notification_service_name}-controller":
+      resource           => "${::ceilometer::params::agent_notification_service_name}-clone",
+      expression         => 'role eq controller',
+      resource_discovery => 'exclusive',
+      score              => 0,
+      require            => Pacemaker::Resource::Service[$::ceilometer::params::agent_notification_service_name],
     }
     pacemaker::resource::ocf { 'delay' :
       ocf_agent_name  => 'heartbeat:Delay',
       clone_params    => 'interleave=true',
       resource_params => 'startdelay=10',
+    }
+    pacemaker::constraint::location_rule { 'delay-controller':
+      resource           => "delay-clone",
+      expression         => 'role eq controller',
+      resource_discovery => 'exclusive',
+      score              => 0,
+      require            => 'delay',
     }
     # Fedora doesn't know `require-all` parameter for constraints yet
     if $::operatingsystem == 'Fedora' {
@@ -1722,14 +2038,42 @@ if hiera('step') >= 4 {
     pacemaker::resource::service { $::heat::params::api_service_name :
       clone_params => 'interleave=true',
     }
+    pacemaker::constraint::location_rule { "${::heat::params::api_service_name}-controller":
+      resource           => "${::heat::params::api_service_name}-clone",
+      expression         => 'role eq controller',
+      resource_discovery => 'exclusive',
+      score              => 0,
+      require            => Pacemaker::Resource::Service[$::heat::params::api_service_name],
+    }
     pacemaker::resource::service { $::heat::params::api_cloudwatch_service_name :
       clone_params => 'interleave=true',
+    }
+    pacemaker::constraint::location_rule { "${::heat::params::api_cloudwatch_service_name}-controller":
+      resource           => "${::heat::params::api_cloudwatch_service_name}-clone",
+      expression         => 'role eq controller',
+      resource_discovery => 'exclusive',
+      score              => 0,
+      require            => Pacemaker::Resource::Service[$::heat::params::api_cloudwatch_service_name],
     }
     pacemaker::resource::service { $::heat::params::api_cfn_service_name :
       clone_params => 'interleave=true',
     }
+    pacemaker::constraint::location_rule { "${::heat::params::api_cfn_service_name}-controller":
+      resource           => "${::heat::params::api_cfn_service_name}-clone",
+      expression         => 'role eq controller',
+      resource_discovery => 'exclusive',
+      score              => 0,
+      require            => Pacemaker::Resource::Service[$::heat::params::api_cfn_service_name],
+    }
     pacemaker::resource::service { $::heat::params::engine_service_name :
       clone_params => 'interleave=true',
+    }
+    pacemaker::constraint::location_rule { "${::heat::params::engine_service_name}-controller":
+      resource           => "${::heat::params::engine_service_name}-clone",
+      expression         => 'role eq controller',
+      resource_discovery => 'exclusive',
+      score              => 0,
+      require            => Pacemaker::Resource::Service[$::heat::params::engine_service_name],
     }
     pacemaker::constraint::base { 'keystone-then-heat-api-constraint':
       constraint_type => 'order',
@@ -1802,6 +2146,153 @@ if hiera('step') >= 4 {
     pacemaker::resource::service { $::horizon::params::http_service:
       clone_params => 'interleave=true',
     }
+    pacemaker::constraint::location_rule { "${::horizon::params::http_service}-controller":
+      resource           => "${::horizon::params::http_service}-clone",
+      expression         => 'role eq controller',
+      resource_discovery => 'exclusive',
+      score              => 0,
+      require            => Pacemaker::Resource::Service[$::horizon::params::http_service],
+    }
+
+    # Add NovaEvacuate active/passive resource (step 7 of the article)
+    # FIXME: without shared_storage=1 ?!? see newest env requirement
+    $pacemaker_admin_uri = hiera('pacemaker_admin_uri')
+    $admin_password = hiera('admin_password')
+    pacemaker::resource::ocf { 'nova-evacuate':
+      ocf_agent_name  => 'openstack:NovaEvacuate',
+      resource_params => "auth_url=${pacemaker_admin_uri} username=admin password=${admin_password} tenant_name=admin no_shared_storage=1",
+    }
+    pacemaker::constraint::location_rule { "nova-evacuate-controller":
+      resource           => 'nova-evacuate'
+      expression         => 'role eq controller',
+      resource_discovery => 'exclusive',
+      score              => 0,
+      require            => 'nova-evacuate',
+    }
+
+    # Step 8 - add constraints to start ip addresses first and then nova-evacuate
+    pacemaker::constraint::base { 'control_vip-then-nova-evacuate':
+      constraint_type   => 'order',
+      first_resource    => "ip-${control_vip}",
+      second_resource   => 'nova-evacuate',
+      first_action      => 'start',
+      second_action     => 'start',
+      require => [Pacemaker::Resource::Ocf['nova-evacuate'],
+                  Pacemaker::Resource::Ip['control_vip']],
+    }
+    if $public_vip and $public_vip != $control_vip {
+      pacemaker::constraint::base { 'public_vip-then-nova-evacuate':
+        constraint_type   => 'order',
+        first_resource    => "ip-${public_vip}",
+        second_resource   => 'nova-evacuate',
+        first_action      => 'start',
+        second_action     => 'start',
+        require => [Pacemaker::Resource::Ocf['nova-evacuate'],
+                    Pacemaker::Resource::Ip['public_vip']],
+      }
+    }
+    if $redis_vip and $redis_vip != $control_vip {
+      pacemaker::constraint::base { 'redis_vip-then-nova-evacuate':
+        constraint_type   => 'order',
+        first_resource    => "ip-${redis_vip}",
+        second_resource   => 'nova-evacuate',
+        first_action      => 'start',
+        second_action     => 'start',
+        require => [Pacemaker::Resource::Ocf['nova-evacuate'],
+                    Pacemaker::Resource::Ip['redis_vip']],
+      }
+    }
+    if $internal_api_vip and $internal_api_vip != $control_vip {
+      pacemaker::constraint::base { 'internal_api_vip-then-nova-evacuate':
+        constraint_type   => 'order',
+        first_resource    => "ip-${internal_api_vip}",
+        second_resource   => 'nova-evacuate',
+        first_action      => 'start',
+        second_action     => 'start',
+        require => [Pacemaker::Resource::Ocf['nova-evacuate'],
+                    Pacemaker::Resource::Ip['internal_api_vip']],
+      }
+    }
+    if $storage_vip and $storage_vip != $control_vip {
+      pacemaker::constraint::base { 'storage_vip-then-nova-evacuate':
+        constraint_type   => 'order',
+        first_resource    => "ip-${storage_vip}",
+        second_resource   => 'nova-evacuate',
+        first_action      => 'start',
+        second_action     => 'start',
+        require => [Pacemaker::Resource::Ocf['nova-evacuate'],
+                    Pacemaker::Resource::Ip['storage_vip']],
+      }
+    }
+    if $storage_mgmt_vip and $storage_mgmt_vip != $control_vip {
+      pacemaker::constraint::base { 'storage_mgmt_vip-then-nova-evacuate':
+        constraint_type   => 'order',
+        first_resource    => "ip-${storage_mgmt_vip}",
+        second_resource   => 'nova-evacuate',
+        first_action      => 'start',
+        second_action     => 'start',
+        require => [Pacemaker::Resource::Ocf['nova-evacuate'],
+                    Pacemaker::Resource::Ip['storage_mgmt_vip']],
+      }
+    }
+    # step 8 - openstack-glance-api-clone neutron-metadata-agent-clone openstack-nova-conductor-clone
+    # FIXME: require-all: fedora does not have require-all yet? Which version anyway
+    pacemaker::constraint::base { "${::glance::params::api_service_name}-then-nova-evacuate":
+      constraint_type   => 'order',
+      first_resource    => "${::glance::params::api_service_name}-clone",
+      second_resource   => 'nova-evacuate',
+      first_action      => 'start',
+      second_action     => 'start',
+      constraint_params => 'require-all=false',
+      require => [Pacemaker::Resource::Ocf['nova-evacuate'],
+                  Pacemaker::Resource::Service[$::glance::params::api_service_name]],
+    }
+
+    pacemaker::constraint::base { "${::neutron::params::metadata_agent_service}-then-nova-evacuate":
+      constraint_type   => 'order',
+      first_resource    => "${::neutron::params::metadata_agent_service}-clone",
+      second_resource   => 'nova-evacuate',
+      first_action      => 'start',
+      second_action     => 'start',
+      constraint_params => 'require-all=false',
+      require => [Pacemaker::Resource::Ocf['nova-evacuate'],
+                  Pacemaker::Resource::Service[$::neutron::params::metadata_agent_service]],
+    }
+
+    pacemaker::constraint::base { "${::nova::params::conductor_service_name}-then-nova-evacuate":
+      constraint_type   => 'order',
+      first_resource    => "${::nova::params::conductor_service_name}-clone",
+      second_resource   => 'nova-evacuate',
+      first_action      => 'start',
+      second_action     => 'start',
+      constraint_params => 'require-all=false',
+      require => [Pacemaker::Resource::Ocf['nova-evacuate'],
+                  Pacemaker::Resource::Service[$::nova::params::conductor_service_name]],
+    }
+    
+    # Step 18 Instance HA
+    # Add resource pacemaker:remote for compute nodes
+    # FIXME: we need to guarantee that it happens as late as possible
+    # not sure nova-evacuate is enough as a dependency
+    $compute_node_names = split(downcase(hiera('compute_node_names')), ',')
+    pacemaker::resource::ocf { $compute_node_names:
+      ocf_agent_name  => 'pacemaker:remote',
+      meta_params     => 'reconnect_interval=60 op monitor interval=20',
+      require         => [Pacemaker::Resource::Ocf['nova-evacuate']],
+    } ->
+    class { "pcmk_node_tag_compute":
+      node => $compute_node_names,
+    } ->
+    exec { "fence-nova-stonith":
+      command => "/usr/sbin/pcs stonith create fence-nova fence_compute auth-url=${pacemaker_admin_uri} username=admin password=${admin_password} tenant_name=admin domain=localdomain record-only=1 action=off --force",
+      unless => "/usr/sbin/pcs stonith show fence-nova > /dev/null 2>&1",
+    } ->
+    exec { "cluster-recheck-interval":
+      command => "/usr/sbin/pcs property set cluster-recheck-interval=1min",
+    } ->
+    class { "pcmk_node_stonith_compute":
+      node => $compute_node_names,
+    }
 
     #VSM
     if 'cisco_n1kv' in hiera('neutron::plugins::ml2::mechanism_drivers') {
@@ -1842,7 +2333,32 @@ if hiera('step') >= 5 {
     class {'::keystone::endpoint' :
       require => Pacemaker::Resource::Service[$::keystone::params::service_name],
     }
+    if $enable_fencing {
+      include tripleo::fencing
+      # FIXME: Currently we set up the compute fencing resources under the pacemaker_master branch
+      # because we cannot run on compute nodes (lack of pcs command) and we do not want to run this
+      # on each controller. Also we need to run this at the end because compute_map is calculated 
+      # very late in the game
+      $compute_map = hiera('compute_map')
+      $ret = compute_stonith($compute_map, $tripleo::fencing::config['devices'])
+      $xvm = $ret[0]
+      $ipmilan = $ret[1]
+      $common_params = {
+        'tries' => 10,
+        'try_sleep' => 3,
+        'manage_fw' => false,
+      }
 
+      # FIXME: We use the pacemaker::stonith::fence_xvm but we had to comment out the package fence-virt requirement as
+      # it would give a duplicate definition error. Also had to set "manage_fw" to errors about duplicate Firewall resources
+      create_resources('pacemaker::stonith::fence_xvm', $xvm, $common_params) 
+      create_resources('pacemaker::stonith::fence_ipmilan', $ipmilan, $common_params)
+
+      # Step 18
+      # FIXME: need to create function that maps compute node name to stonith resource
+      # that will/has been created
+      #pcmk_node_stonith_compute($xvm.keys())
+    }
   }
 
 } #END STEP 5
