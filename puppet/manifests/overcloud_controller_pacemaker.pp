@@ -212,7 +212,7 @@ if hiera('step') >= 2 {
         clone_params => true,
       }
       pacemaker::constraint::location_rule { 'haproxy-controller':
-        resource           => Pacemaker::Resource::Service['haproxy'],
+        resource           => 'haproxy-clone',
         expression         => 'role eq controller',
         resource_discovery => 'exclusive',
         score              => 0,
@@ -224,7 +224,7 @@ if hiera('step') >= 2 {
         ip_address => $control_vip,
       }
       pacemaker::constraint::location_rule { 'controller_vip-ctrl':
-        resource           => Pacemaker::Resource::Service['control_vip'],
+        resource           => "ip-${control_vip}",
         expression         => 'role eq controller',
         resource_discovery => 'exclusive',
         score              => 0,
@@ -254,7 +254,7 @@ if hiera('step') >= 2 {
           ip_address => $public_vip,
         }
         pacemaker::constraint::location_rule { 'public_vip-ctrl':
-          resource           => Pacemaker::Resource::Service['public_vip'],
+          resource           => "ip-${public_vip}",
           expression         => 'role eq controller',
           resource_discovery => 'exclusive',
           score              => 0,
@@ -285,7 +285,7 @@ if hiera('step') >= 2 {
           ip_address => $redis_vip,
         }
         pacemaker::constraint::location_rule { 'redis_vip-ctrl':
-          resource           => Pacemaker::Resource::Service['redis_vip'],
+          resource           => "ip-${redis_vip}",
           expression         => 'role eq controller',
           resource_discovery => 'exclusive',
           score              => 0,
@@ -316,7 +316,7 @@ if hiera('step') >= 2 {
           ip_address => $internal_api_vip,
         }
         pacemaker::constraint::location_rule { 'internal_vip-ctrl':
-          resource           => Pacemaker::Resource::Service['internal_vip'],
+          resource           => "ip-${internal_api_vip}",
           expression         => 'role eq controller',
           resource_discovery => 'exclusive',
           score              => 0,
@@ -324,7 +324,7 @@ if hiera('step') >= 2 {
         }
         pacemaker::constraint::base { 'internal_api_vip-then-haproxy':
           constraint_type   => 'order',
-          first_resource    => "ip-${internal_api_vip}",
+          first_resource    => "ip-${internal_api_vip}", 
           second_resource   => 'haproxy-clone',
           first_action      => 'start',
           second_action     => 'start',
@@ -347,7 +347,7 @@ if hiera('step') >= 2 {
           ip_address => $storage_vip,
         }
         pacemaker::constraint::location_rule { 'storage_vip-ctrl':
-          resource           => Pacemaker::Resource::Service['storage_vip'],
+          resource           => "ip-${storage_vip}",
           expression         => 'role eq controller',
           resource_discovery => 'exclusive',
           score              => 0,
@@ -378,7 +378,7 @@ if hiera('step') >= 2 {
           ip_address => $storage_mgmt_vip,
         }
         pacemaker::constraint::location_rule { 'storage_mgmt_vip-ctrl':
-          resource           => Pacemaker::Resource::Service['storage_mgmt_vip'],
+          resource           => "ip-${storage_mgmt_vip}",
           expression         => 'role eq controller',
           resource_discovery => 'exclusive',
           score              => 0,
@@ -409,6 +409,14 @@ if hiera('step') >= 2 {
       clone_params => 'interleave=true',
       require      => Class['::memcached'],
     }
+    pacemaker::constraint::location_rule { "${::memcached::params::service_name}-controller":
+      resource           => "${::memcached::params::service_name}-clone",
+      expression         => 'role eq controller',
+      resource_discovery => 'exclusive',
+      score              => 0,
+      require            => Pacemaker::Resource::Service[$::memcached::params::service_name],
+    }
+
 
     pacemaker::resource::ocf { 'rabbitmq':
       ocf_agent_name  => 'heartbeat:rabbitmq-cluster',
@@ -416,12 +424,26 @@ if hiera('step') >= 2 {
       clone_params    => 'ordered=true interleave=true',
       require         => Class['::rabbitmq'],
     }
+    pacemaker::constraint::location_rule { "rabbitmq-controller":
+      resource           => "rabbitmq-clone",
+      expression         => 'role eq controller',
+      resource_discovery => 'exclusive',
+      score              => 0,
+      require            => Pacemaker::Resource::Service["rabbitmq"],
+    }
 
     if downcase(hiera('ceilometer_backend')) == 'mongodb' {
       pacemaker::resource::service { $::mongodb::params::service_name :
         op_params    => 'start timeout=370s stop timeout=200s',
         clone_params => true,
         require      => Class['::mongodb::server'],
+      }
+      pacemaker::constraint::location_rule { "${::mongodb::params::service_name}-controller":
+        resource           => "${::mongodb::params::service_name}-clone",
+        expression         => 'role eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Service[$::mongodb::params::service_name],
       }
       # NOTE (spredzy) : The replset can only be run
       # once all the nodes have joined the cluster.
@@ -444,6 +466,13 @@ if hiera('step') >= 2 {
       require         => Class['::mysql::server'],
       before          => Exec['galera-ready'],
     }
+    pacemaker::constraint::location_rule { "galera-controller":
+      resource           => "galera-master",
+      expression         => 'role eq controller',
+      resource_discovery => 'exclusive',
+      score              => 0,
+      require            => Pacemaker::Resource::Service['galera'],
+    }
 
     pacemaker::resource::ocf { 'redis':
       ocf_agent_name  => 'heartbeat:redis',
@@ -451,6 +480,13 @@ if hiera('step') >= 2 {
       meta_params     => 'notify=true ordered=true interleave=true',
       resource_params => 'wait_last_known_master=true',
       require         => Class['::redis'],
+    }
+    pacemaker::constraint::location_rule { "redis-controller":
+      resource           => "redis-master",
+      expression         => 'role eq controller',
+      resource_discovery => 'exclusive',
+      score              => 0,
+      require            => Pacemaker::Resource::Service['redis'],
     }
 
   }
