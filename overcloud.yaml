@@ -807,6 +807,13 @@ resources:
   HeatAuthEncryptionKey:
     type: OS::Heat::RandomString
 
+  # FIXME: not random enough (length and char set), but RandomString
+  # has a limit of 512
+  PacemakerRemotePassword:
+    type: OS::Heat::RandomString
+    properties:
+      length: 512
+
   PcsdPassword:
     type: OS::Heat::RandomString
     properties:
@@ -925,6 +932,7 @@ resources:
           NovaPassword: {get_param: NovaPassword}
           NtpServer: {get_param: NtpServer}
           MongoDbNoJournal: {get_param: MongoDbNoJournal}
+          PacemakerRemotePassword: {get_resource: PacemakerRemotePassword}
           PcsdPassword: {get_resource: PcsdPassword}
           PublicVirtualInterface: {get_param: PublicVirtualInterface}
           RabbitPassword: {get_param: RabbitPassword}
@@ -1029,6 +1037,7 @@ resources:
           NovaOVSBridge: {get_param: NovaOVSBridge}
           NovaSecurityGroupAPI: {get_param: NovaSecurityGroupAPI}
           NtpServer: {get_param: NtpServer}
+          PacemakerRemotePassword: {get_resource: PacemakerRemotePassword}
           RabbitHost: {get_attr: [VipMap, net_ip_map, {get_param: [ServiceNetMap, RabbitMqNetwork]}]}
           RabbitPassword: {get_param: RabbitPassword}
           RabbitUserName: {get_param: RabbitUserName}
