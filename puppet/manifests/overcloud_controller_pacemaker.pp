@@ -15,7 +15,8 @@
 
 class pcmk_node_tag_controller($node) {
   define process_property {
-    pacemaker::property { "property $node-$name":
+    pacemaker::property { "property $name-osprole-controller":
+      node     => $name,
       property => 'osprole',
       value    => 'controller',
     }
@@ -25,7 +26,8 @@ class pcmk_node_tag_controller($node) {
 
 class pcmk_node_tag_compute($node) {
   define process_property {
-    pacemaker::property { "property $node-$name":
+    pacemaker::property { "property $name-osprole-compute":
+      node     => $name,
       property => 'osprole',
       value    => 'compute',
     }
@@ -250,7 +252,7 @@ if hiera('step') >= 2 {
         expression         => 'role eq controller',
         resource_discovery => 'exclusive',
         score              => 0,
-        require            => Pacemaker::Resource::Service['control_vip'],
+        require            => Pacemaker::Resource::Ip['control_vip'],
       }
       pacemaker::constraint::base { 'control_vip-then-haproxy':
         constraint_type   => 'order',
@@ -280,7 +282,7 @@ if hiera('step') >= 2 {
           expression         => 'role eq controller',
           resource_discovery => 'exclusive',
           score              => 0,
-          require            => Pacemaker::Resource::Service['public_vip'],
+          require            => Pacemaker::Resource::Ip['public_vip'],
         }
         pacemaker::constraint::base { 'public_vip-then-haproxy':
           constraint_type   => 'order',
@@ -311,7 +313,7 @@ if hiera('step') >= 2 {
           expression         => 'role eq controller',
           resource_discovery => 'exclusive',
           score              => 0,
-          require            => Pacemaker::Resource::Service['redis_vip'],
+          require            => Pacemaker::Resource::Ip['redis_vip'],
         }
         pacemaker::constraint::base { 'redis_vip-then-haproxy':
           constraint_type   => 'order',
@@ -342,7 +344,7 @@ if hiera('step') >= 2 {
           expression         => 'role eq controller',
           resource_discovery => 'exclusive',
           score              => 0,
-          require            => Pacemaker::Resource::Service['internal_vip'],
+          require            => Pacemaker::Resource::Ip['internal_vip'],
         }
         pacemaker::constraint::base { 'internal_api_vip-then-haproxy':
           constraint_type   => 'order',
@@ -373,7 +375,7 @@ if hiera('step') >= 2 {
           expression         => 'role eq controller',
           resource_discovery => 'exclusive',
           score              => 0,
-          require            => Pacemaker::Resource::Service['storage_vip'],
+          require            => Pacemaker::Resource::Ip['storage_vip'],
         }
         pacemaker::constraint::base { 'storage_vip-then-haproxy':
           constraint_type   => 'order',
@@ -404,7 +406,7 @@ if hiera('step') >= 2 {
           expression         => 'role eq controller',
           resource_discovery => 'exclusive',
           score              => 0,
-          require            => Pacemaker::Resource::Service['storage_mgmt_vip'],
+          require            => Pacemaker::Resource::Ip['storage_mgmt_vip'],
         }
         pacemaker::constraint::base { 'storage_mgmt_vip-then-haproxy':
           constraint_type   => 'order',
