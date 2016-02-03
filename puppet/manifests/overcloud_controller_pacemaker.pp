@@ -344,7 +344,7 @@ if hiera('step') >= 2 {
           expression         => 'role eq controller',
           resource_discovery => 'exclusive',
           score              => 0,
-          require            => Pacemaker::Resource::Ip['internal_vip'],
+          require            => Pacemaker::Resource::Ip['internal_api_vip'],
         }
         pacemaker::constraint::base { 'internal_api_vip-then-haproxy':
           constraint_type   => 'order',
