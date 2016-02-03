@@ -1253,7 +1253,7 @@ if hiera('step') >= 4 {
     }
     pacemaker::resource::service { $::cinder::params::volume_service : }
     pacemaker::constraint::location_rule { "${::cinder::params::volume_service}-controller":
-      resource           => "${::cinder::params::volume_service}-clone",
+      resource           => "${::cinder::params::volume_service}",
       expression         => 'osprole eq controller',
       resource_discovery => 'exclusive',
       score              => 0,
@@ -1473,7 +1473,7 @@ if hiera('step') >= 4 {
         expression         => 'osprole eq controller',
         resource_discovery => 'exclusive',
         score              => 0,
-        require            => Pacemaker::Resource::Service[$::neutron::params::ovs_cleanup_service],
+        require            => Pacemaker::Resource::Ocf[$::neutron::params::ovs_cleanup_service],
       }
       pacemaker::resource::ocf { 'neutron-netns-cleanup':
         ocf_agent_name => 'neutron:NetnsCleanup',
