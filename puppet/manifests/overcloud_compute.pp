@@ -82,7 +82,7 @@ if $rbd_ephemeral_storage or $rbd_persistent_storage {
 
   $client_keys = hiera('ceph::profile::params::client_keys')
   $client_user = join(['client.', hiera('ceph_client_user_name')])
-  include ::nova::compute::rbd
+  #include ::nova::compute::rbd
   #class { '::nova::compute::rbd': }
   #  libvirt_rbd_secret_key => $client_keys[$client_user]['secret'],
   #  require                => Service['pacemaker_remote'],

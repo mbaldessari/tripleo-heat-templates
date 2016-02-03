@@ -237,7 +237,7 @@ if hiera('step') >= 2 {
       }
       pacemaker::constraint::location_rule { 'haproxy-controller':
         resource           => 'haproxy-clone',
-        expression         => 'role eq controller',
+        expression         => 'osprole eq controller',
         resource_discovery => 'exclusive',
         score              => 0,
         require            => Pacemaker::Resource::Service['haproxy'],
@@ -249,7 +249,7 @@ if hiera('step') >= 2 {
       }
       pacemaker::constraint::location_rule { 'controller_vip-ctrl':
         resource           => "ip-${control_vip}",
-        expression         => 'role eq controller',
+        expression         => 'osprole eq controller',
         resource_discovery => 'exclusive',
         score              => 0,
         require            => Pacemaker::Resource::Ip['control_vip'],
@@ -279,7 +279,7 @@ if hiera('step') >= 2 {
         }
         pacemaker::constraint::location_rule { 'public_vip-ctrl':
           resource           => "ip-${public_vip}",
-          expression         => 'role eq controller',
+          expression         => 'osprole eq controller',
           resource_discovery => 'exclusive',
           score              => 0,
           require            => Pacemaker::Resource::Ip['public_vip'],
@@ -310,7 +310,7 @@ if hiera('step') >= 2 {
         }
         pacemaker::constraint::location_rule { 'redis_vip-ctrl':
           resource           => "ip-${redis_vip}",
-          expression         => 'role eq controller',
+          expression         => 'osprole eq controller',
           resource_discovery => 'exclusive',
           score              => 0,
           require            => Pacemaker::Resource::Ip['redis_vip'],
@@ -341,7 +341,7 @@ if hiera('step') >= 2 {
         }
         pacemaker::constraint::location_rule { 'internal_vip-ctrl':
           resource           => "ip-${internal_api_vip}",
-          expression         => 'role eq controller',
+          expression         => 'osprole eq controller',
           resource_discovery => 'exclusive',
           score              => 0,
           require            => Pacemaker::Resource::Ip['internal_api_vip'],
@@ -372,7 +372,7 @@ if hiera('step') >= 2 {
         }
         pacemaker::constraint::location_rule { 'storage_vip-ctrl':
           resource           => "ip-${storage_vip}",
-          expression         => 'role eq controller',
+          expression         => 'osprole eq controller',
           resource_discovery => 'exclusive',
           score              => 0,
           require            => Pacemaker::Resource::Ip['storage_vip'],
@@ -403,7 +403,7 @@ if hiera('step') >= 2 {
         }
         pacemaker::constraint::location_rule { 'storage_mgmt_vip-ctrl':
           resource           => "ip-${storage_mgmt_vip}",
-          expression         => 'role eq controller',
+          expression         => 'osprole eq controller',
           resource_discovery => 'exclusive',
           score              => 0,
           require            => Pacemaker::Resource::Ip['storage_mgmt_vip'],
@@ -435,7 +435,7 @@ if hiera('step') >= 2 {
     }
     pacemaker::constraint::location_rule { "${::memcached::params::service_name}-controller":
       resource           => "${::memcached::params::service_name}-clone",
-      expression         => 'role eq controller',
+      expression         => 'osprole eq controller',
       resource_discovery => 'exclusive',
       score              => 0,
       require            => Pacemaker::Resource::Service[$::memcached::params::service_name],
@@ -450,10 +450,10 @@ if hiera('step') >= 2 {
     }
     pacemaker::constraint::location_rule { "rabbitmq-controller":
       resource           => "rabbitmq-clone",
-      expression         => 'role eq controller',
+      expression         => 'osprole eq controller',
       resource_discovery => 'exclusive',
       score              => 0,
-      require            => Pacemaker::Resource::Service["rabbitmq"],
+      require            => Pacemaker::Resource::Ocf["rabbitmq"],
     }
 
     if downcase(hiera('ceilometer_backend')) == 'mongodb' {
@@ -464,7 +464,7 @@ if hiera('step') >= 2 {
       }
       pacemaker::constraint::location_rule { "${::mongodb::params::service_name}-controller":
         resource           => "${::mongodb::params::service_name}-clone",
-        expression         => 'role eq controller',
+        expression         => 'osprole eq controller',
         resource_discovery => 'exclusive',
         score              => 0,
         require            => Pacemaker::Resource::Service[$::mongodb::params::service_name],
@@ -492,10 +492,10 @@ if hiera('step') >= 2 {
     }
     pacemaker::constraint::location_rule { "galera-controller":
       resource           => "galera-master",
-      expression         => 'role eq controller',
+      expression         => 'osprole eq controller',
       resource_discovery => 'exclusive',
       score              => 0,
-      require            => Pacemaker::Resource::Service['galera'],
+      require            => Pacemaker::Resource::Ocf['galera'],
     }
 
     pacemaker::resource::ocf { 'redis':
@@ -507,10 +507,10 @@ if hiera('step') >= 2 {
     }
     pacemaker::constraint::location_rule { "redis-controller":
       resource           => "redis-master",
-      expression         => 'role eq controller',
+      expression         => 'osprole eq controller',
       resource_discovery => 'exclusive',
       score              => 0,
-      require            => Pacemaker::Resource::Service['redis'],
+      require            => Pacemaker::Resource::Ocf['redis'],
     }
 
   }
@@ -1185,7 +1185,7 @@ if hiera('step') >= 4 {
     }
     pacemaker::constraint::location_rule { "${::keystone::params::service_name}-controller":
       resource           => "${::keystone::params::service_name}-clone",
-      expression         => 'role eq controller',
+      expression         => 'osprole eq controller',
       resource_discovery => 'exclusive',
       score              => 0,
       require            => Pacemaker::Resource::Service[$::keystone::params::service_name],
@@ -1236,7 +1236,7 @@ if hiera('step') >= 4 {
     }
     pacemaker::constraint::location_rule { "${::cinder::params::api_service}-controller":
       resource           => "${::cinder::params::api_service}-clone",
-      expression         => 'role eq controller',
+      expression         => 'osprole eq controller',
       resource_discovery => 'exclusive',
       score              => 0,
       require            => Pacemaker::Resource::Service[$::cinder::params::api_service],
@@ -1246,7 +1246,7 @@ if hiera('step') >= 4 {
     }
     pacemaker::constraint::location_rule { "${::cinder::params::scheduler_service}-controller":
       resource           => "${::cinder::params::scheduler_service}-clone",
-      expression         => 'role eq controller',
+      expression         => 'osprole eq controller',
       resource_discovery => 'exclusive',
       score              => 0,
       require            => Pacemaker::Resource::Service[$::cinder::params::scheduler_service],
@@ -1254,7 +1254,7 @@ if hiera('step') >= 4 {
     pacemaker::resource::service { $::cinder::params::volume_service : }
     pacemaker::constraint::location_rule { "${::cinder::params::volume_service}-controller":
       resource           => "${::cinder::params::volume_service}-clone",
-      expression         => 'role eq controller',
+      expression         => 'osprole eq controller',
       resource_discovery => 'exclusive',
       score              => 0,
       require            => Pacemaker::Resource::Service[$::cinder::params::volume_service],
@@ -1327,7 +1327,7 @@ if hiera('step') >= 4 {
     }
     pacemaker::constraint::location_rule { "${::glance::params::registry_service_name}-controller":
       resource           => "${::glance::params::registry_service_name}-clone",
-      expression         => 'role eq controller',
+      expression         => 'osprole eq controller',
       resource_discovery => 'exclusive',
       score              => 0,
       require            => Pacemaker::Resource::Service[$::glance::params::registry_service_name],
@@ -1337,7 +1337,7 @@ if hiera('step') >= 4 {
     }
     pacemaker::constraint::location_rule { "${::glance::params::api_service_name}-controller":
       resource           => "${::glance::params::api_service_name}-clone",
-      expression         => 'role eq controller',
+      expression         => 'osprole eq controller',
       resource_discovery => 'exclusive',
       score              => 0,
       require            => Pacemaker::Resource::Service[$::glance::params::api_service_name],
@@ -1398,7 +1398,7 @@ if hiera('step') >= 4 {
     }
     pacemaker::constraint::location_rule { "${::neutron::params::server_service}-controller":
       resource           => "${::neutron::params::server_service}-clone",
-      expression         => 'role eq controller',
+      expression         => 'osprole eq controller',
       resource_discovery => 'exclusive',
       score              => 0,
       require            => Pacemaker::Resource::Service[$::neutron::params::server_service],
@@ -1409,7 +1409,7 @@ if hiera('step') >= 4 {
       }
       pacemaker::constraint::location_rule { "${::neutron::params::l3_agent_service}-controller":
         resource           => "${::neutron::params::l3_agent_service}-clone",
-        expression         => 'role eq controller',
+        expression         => 'osprole eq controller',
         resource_discovery => 'exclusive',
         score              => 0,
         require            => Pacemaker::Resource::Service[$::neutron::params::l3_agent_service],
@@ -1421,7 +1421,7 @@ if hiera('step') >= 4 {
       }
       pacemaker::constraint::location_rule { "${::neutron::params::dhcp_agent_service}-controller":
         resource           => "${::neutron::params::dhcp_agent_service}-clone",
-        expression         => 'role eq controller',
+        expression         => 'osprole eq controller',
         resource_discovery => 'exclusive',
         score              => 0,
         require            => Pacemaker::Resource::Service[$::neutron::params::dhcp_agent_service],
@@ -1433,7 +1433,7 @@ if hiera('step') >= 4 {
       }
       pacemaker::constraint::location_rule { "${::neutron::params::ovs_agent_service}-controller":
         resource           => "${::neutron::params::ovs_agent_service}-clone",
-        expression         => 'role eq controller',
+        expression         => 'osprole eq controller',
         resource_discovery => 'exclusive',
         score              => 0,
         require            => Pacemaker::Resource::Service[$::neutron::params::ovs_agent_service],
@@ -1445,7 +1445,7 @@ if hiera('step') >= 4 {
       }
       pacemaker::constraint::location_rule { "tomcat-controller":
         resource           => 'tomcat-clone',
-        expression         => 'role eq controller',
+        expression         => 'osprole eq controller',
         resource_discovery => 'exclusive',
         score              => 0,
         require            => 'tomcat',
@@ -1457,7 +1457,7 @@ if hiera('step') >= 4 {
       }
       pacemaker::constraint::location_rule { "${::neutron::params::metadata_agent_service}-controller":
         resource           => "${::neutron::params::metadata_agent_service}-clone",
-        expression         => 'role eq controller',
+        expression         => 'osprole eq controller',
         resource_discovery => 'exclusive',
         score              => 0,
         require            => Pacemaker::Resource::Service[$::neutron::params::metadata_agent_service],
@@ -1470,7 +1470,7 @@ if hiera('step') >= 4 {
       }
       pacemaker::constraint::location_rule { "${::neutron::params::ovs_cleanup_service}-controller":
         resource           => "${::neutron::params::ovs_cleanup_service}-clone",
-        expression         => 'role eq controller',
+        expression         => 'osprole eq controller',
         resource_discovery => 'exclusive',
         score              => 0,
         require            => Pacemaker::Resource::Service[$::neutron::params::ovs_cleanup_service],
@@ -1481,7 +1481,7 @@ if hiera('step') >= 4 {
       }
       pacemaker::constraint::location_rule { "neutron-netns-cleanup-controller":
         resource           => 'neutron-netns-cleanup-clone',
-        expression         => 'role eq controller',
+        expression         => 'osprole eq controller',
         resource_discovery => 'exclusive',
         score              => 0,
         require            => 'neutron-netns-cleanup',
@@ -1527,7 +1527,7 @@ if hiera('step') >= 4 {
       service_name => "${::neutron::params::ovs_agent_service}",
       clone_params => "interleave=true",
     } -> exec {  "${::neutron::params::ovs_agent_service}-location-compute":  
-      command => "/usr/sbin/pcs constraint location ${::neutron::params::ovs_agent_service}-compute-clone rule resource-discovery=exclusive score=0 osprole eq compute",
+      command => "/usr/sbin/pcs constraint location ${::neutron::params::ovs_agent_service}-compute-clone rule resource-discovery=exclusive score=0 osposprole eq compute",
       unless  => "/usr/sbin/pcs constraint location show | grep ${::neutron::params::ovs_agent_service}-compute-clone > /dev/null 2>&1",
     }
     pacemaker::constraint::base { "${::neutron::params::server_service}-then-${::neutron::params::ovs_agent_service}-compute":
@@ -1546,7 +1546,7 @@ if hiera('step') >= 4 {
       service_name => "libvirtd",
       clone_params => "interleave=true",
     } -> exec {  "libvirtd-location-compute":  
-      command => "/usr/sbin/pcs constraint location libvirtd-compute-clone rule resource-discovery=exclusive score=0 osprole eq compute",
+      command => "/usr/sbin/pcs constraint location libvirtd-compute-clone rule resource-discovery=exclusive score=0 osposprole eq compute",
       unless  => "/usr/sbin/pcs constraint location show | grep libvirtd-compute-clone > /dev/null 2>&1",
     }
     pacemaker::constraint::base { "${::neutron::params::ovs_agent_service}-compute-then-libvirtd-compute":
@@ -1570,7 +1570,7 @@ if hiera('step') >= 4 {
     pacemaker::resource::service { "openstack-ceilometer-compute":
       clone_params => "interleave=true",
     } -> exec {  "openstack-ceilometer-compute-location-compute":  
-      command => "/usr/sbin/pcs constraint location openstack-ceilometer-compute-clone rule resource-discovery=exclusive score=0 osprole eq compute",
+      command => "/usr/sbin/pcs constraint location openstack-ceilometer-compute-clone rule resource-discovery=exclusive score=0 osposprole eq compute",
       unless  => "/usr/sbin/pcs constraint location show | grep openstack-ceilometer-compute-clone > /dev/null 2>&1",
     }
     pacemaker::constraint::base { "${::ceilometer::params::agent_notification_service_name}-then-openstack-ceilometer-compute":
@@ -1607,7 +1607,7 @@ if hiera('step') >= 4 {
       resource_params => "auth_url=${pacemaker_admin_uri} username=admin password=${admin_password} tenant_name=admin domain=localdomain op start timeout=300",
       require => Pacemaker::Resource::Service["libvirtd-compute"],
     } -> exec {  "nova-compute-location":  
-      command => "/usr/sbin/pcs constraint location nova-compute-clone rule resource-discovery=exclusive score=0 osprole eq compute",
+      command => "/usr/sbin/pcs constraint location nova-compute-clone rule resource-discovery=exclusive score=0 osposprole eq compute",
       unless  => "/usr/sbin/pcs constraint location show | grep nova-compute-clone > /dev/null 2>&1",
     }
     pacemaker::constraint::base { "${::nova::params::conductor_service_name}-then-nova-compute":
@@ -1768,7 +1768,7 @@ if hiera('step') >= 4 {
     }
     pacemaker::constraint::location_rule { "${::nova::params::api_service_name}-controller":
       resource           => "${::nova::params::api_service_name}-clone",
-      expression         => 'role eq controller',
+      expression         => 'osprole eq controller',
       resource_discovery => 'exclusive',
       score              => 0,
       require            => Pacemaker::Resource::Service[$::nova::params::api_service_name],
@@ -1779,7 +1779,7 @@ if hiera('step') >= 4 {
     }
     pacemaker::constraint::location_rule { "${::nova::params::conductor_service_name}-controller":
       resource           => "${::nova::params::conductor_service_name}-clone",
-      expression         => 'role eq controller',
+      expression         => 'osprole eq controller',
       resource_discovery => 'exclusive',
       score              => 0,
       require            => Pacemaker::Resource::Service[$::nova::params::conductor_service_name],
@@ -1791,7 +1791,7 @@ if hiera('step') >= 4 {
     }
     pacemaker::constraint::location_rule { "${::nova::params::consoleauth_service_name}-controller":
       resource           => "${::nova::params::consoleauth_service_name}-clone",
-      expression         => 'role eq controller',
+      expression         => 'osprole eq controller',
       resource_discovery => 'exclusive',
       score              => 0,
       require            => Pacemaker::Resource::Service[$::nova::params::consoleauth_service_name],
@@ -1802,7 +1802,7 @@ if hiera('step') >= 4 {
     }
     pacemaker::constraint::location_rule { "${::nova::params::vncproxy_service_name}-controller":
       resource           => "${::nova::params::vncproxy_service_name}-clone",
-      expression         => 'role eq controller',
+      expression         => 'osprole eq controller',
       resource_discovery => 'exclusive',
       score              => 0,
       require            => Pacemaker::Resource::Service[$::nova::params::vncproxy_service_name],
@@ -1813,7 +1813,7 @@ if hiera('step') >= 4 {
     }
     pacemaker::constraint::location_rule { "${::nova::params::scheduler_service_name}-controller":
       resource           => "${::nova::params::scheduler_service_name}-clone",
-      expression         => 'role eq controller',
+      expression         => 'osprole eq controller',
       resource_discovery => 'exclusive',
       score              => 0,
       require            => Pacemaker::Resource::Service[$::nova::params::scheduler_service_name],
@@ -1911,7 +1911,7 @@ if hiera('step') >= 4 {
     }
     pacemaker::constraint::location_rule { "${::ceilometer::params::agent_central_service_name}-controller":
       resource           => "${::ceilometer::params::agent_central_service_name}-clone",
-      expression         => 'role eq controller',
+      expression         => 'osprole eq controller',
       resource_discovery => 'exclusive',
       score              => 0,
       require            => Pacemaker::Resource::Service[$::ceilometer::params::agent_central_service_name],
@@ -1921,7 +1921,7 @@ if hiera('step') >= 4 {
     }
     pacemaker::constraint::location_rule { "${::ceilometer::params::collector_service_name}-controller":
       resource           => "${::ceilometer::params::collector_service_name}-clone",
-      expression         => 'role eq controller',
+      expression         => 'osprole eq controller',
       resource_discovery => 'exclusive',
       score              => 0,
       require            => Pacemaker::Resource::Service[$::ceilometer::params::collector_service_name],
@@ -1931,7 +1931,7 @@ if hiera('step') >= 4 {
     }
     pacemaker::constraint::location_rule { "${::ceilometer::params::api_service_name}-controller":
       resource           => "${::ceilometer::params::api_service_name}-clone",
-      expression         => 'role eq controller',
+      expression         => 'osprole eq controller',
       resource_discovery => 'exclusive',
       score              => 0,
       require            => Pacemaker::Resource::Service[$::ceilometer::params::api_service_name],
@@ -1941,7 +1941,7 @@ if hiera('step') >= 4 {
     }
     pacemaker::constraint::location_rule { "${::ceilometer::params::agent_notification_service_name}-controller":
       resource           => "${::ceilometer::params::agent_notification_service_name}-clone",
-      expression         => 'role eq controller',
+      expression         => 'osprole eq controller',
       resource_discovery => 'exclusive',
       score              => 0,
       require            => Pacemaker::Resource::Service[$::ceilometer::params::agent_notification_service_name],
@@ -1953,7 +1953,7 @@ if hiera('step') >= 4 {
     }
     pacemaker::constraint::location_rule { 'delay-controller':
       resource           => "delay-clone",
-      expression         => 'role eq controller',
+      expression         => 'osprole eq controller',
       resource_discovery => 'exclusive',
       score              => 0,
       require            => 'delay',
@@ -2042,7 +2042,7 @@ if hiera('step') >= 4 {
     }
     pacemaker::constraint::location_rule { "${::heat::params::api_service_name}-controller":
       resource           => "${::heat::params::api_service_name}-clone",
-      expression         => 'role eq controller',
+      expression         => 'osprole eq controller',
       resource_discovery => 'exclusive',
       score              => 0,
       require            => Pacemaker::Resource::Service[$::heat::params::api_service_name],
@@ -2052,7 +2052,7 @@ if hiera('step') >= 4 {
     }
     pacemaker::constraint::location_rule { "${::heat::params::api_cloudwatch_service_name}-controller":
       resource           => "${::heat::params::api_cloudwatch_service_name}-clone",
-      expression         => 'role eq controller',
+      expression         => 'osprole eq controller',
       resource_discovery => 'exclusive',
       score              => 0,
       require            => Pacemaker::Resource::Service[$::heat::params::api_cloudwatch_service_name],
@@ -2062,7 +2062,7 @@ if hiera('step') >= 4 {
     }
     pacemaker::constraint::location_rule { "${::heat::params::api_cfn_service_name}-controller":
       resource           => "${::heat::params::api_cfn_service_name}-clone",
-      expression         => 'role eq controller',
+      expression         => 'osprole eq controller',
       resource_discovery => 'exclusive',
       score              => 0,
       require            => Pacemaker::Resource::Service[$::heat::params::api_cfn_service_name],
@@ -2072,7 +2072,7 @@ if hiera('step') >= 4 {
     }
     pacemaker::constraint::location_rule { "${::heat::params::engine_service_name}-controller":
       resource           => "${::heat::params::engine_service_name}-clone",
-      expression         => 'role eq controller',
+      expression         => 'osprole eq controller',
       resource_discovery => 'exclusive',
       score              => 0,
       require            => Pacemaker::Resource::Service[$::heat::params::engine_service_name],
@@ -2150,7 +2150,7 @@ if hiera('step') >= 4 {
     }
     pacemaker::constraint::location_rule { "${::horizon::params::http_service}-controller":
       resource           => "${::horizon::params::http_service}-clone",
-      expression         => 'role eq controller',
+      expression         => 'osprole eq controller',
       resource_discovery => 'exclusive',
       score              => 0,
       require            => Pacemaker::Resource::Service[$::horizon::params::http_service],
@@ -2166,7 +2166,7 @@ if hiera('step') >= 4 {
     }
     pacemaker::constraint::location_rule { "nova-evacuate-controller":
       resource           => 'nova-evacuate',
-      expression         => 'role eq controller',
+      expression         => 'osprole eq controller',
       resource_discovery => 'exclusive',
       score              => 0,
       require            => 'nova-evacuate',
