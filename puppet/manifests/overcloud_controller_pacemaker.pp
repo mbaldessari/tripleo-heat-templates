@@ -2340,7 +2340,7 @@ if hiera('step') >= 5 {
       # FIXME: Currently we set up the compute fencing resources under the pacemaker_master branch
       # because we cannot run on compute nodes (lack of pcs command) and we do not want to run this
       # on each controller. Also we need to run this at the end because compute_map is calculated 
-      # very late in the game
+      # late in the game (at least from anedoctal evidence, need to investigate more)
       $compute_map = hiera('compute_map')
       $ret = compute_stonith($compute_map, $tripleo::fencing::config['devices'])
       $xvm = $ret[0]
