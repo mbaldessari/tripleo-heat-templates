@@ -1484,7 +1484,7 @@ if hiera('step') >= 4 {
         expression         => 'osprole eq controller',
         resource_discovery => 'exclusive',
         score              => 0,
-        require            => 'neutron-netns-cleanup',
+        require            => Pacemaker::Resource::Ocf['neutron-netns-cleanup'],
       }
 
       # neutron - one chain ovs-cleanup-->netns-cleanup-->ovs-agent
@@ -1956,7 +1956,7 @@ if hiera('step') >= 4 {
       expression         => 'osprole eq controller',
       resource_discovery => 'exclusive',
       score              => 0,
-      require            => 'delay',
+      require            => Pacemaker::Resource::Ocf['delay'],
     }
     # Fedora doesn't know `require-all` parameter for constraints yet
     if $::operatingsystem == 'Fedora' {
@@ -2169,7 +2169,7 @@ if hiera('step') >= 4 {
       expression         => 'osprole eq controller',
       resource_discovery => 'exclusive',
       score              => 0,
-      require            => 'nova-evacuate',
+      require            => Pacemaker::Resource::Ocf['nova-evacuate'],
     }
 
     # Step 8 - add constraints to start ip addresses first and then nova-evacuate
