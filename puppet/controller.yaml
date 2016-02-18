@@ -869,7 +869,6 @@ resources:
       server: {get_resource: Controller}
       input_values:
         bootstack_nodeid: {get_attr: [Controller, name]}
-        instance_ha: {get_param: InstanceHA}
         ceilometer_workers: {get_param: CeilometerWorkers}
         cinder_workers: {get_param: CinderWorkers}
         glance_workers: {get_param: GlanceWorkers}
@@ -1114,6 +1113,7 @@ resources:
               - {get_param: MysqlVirtualIP}
               - '/nova'
         instance_name_template: {get_param: InstanceNameTemplate}
+        instance_ha: {get_param: InstanceHA}
         fencing_config: {get_param: FencingConfig}
         pacemaker_remote_password: {get_param: PacemakerRemotePassword}
         pcsd_password: {get_param: PcsdPassword}
@@ -1236,6 +1236,7 @@ resources:
                 bootstack_nodeid: {get_input: bootstack_nodeid}
 
                 # Pacemaker
+                instance_ha: {get_input: instance_ha}
                 enable_fencing: {get_input: enable_fencing}
                 enable_load_balancer: {get_input: enable_load_balancer}
                 hacluster_pwd: {get_input: pcsd_password}

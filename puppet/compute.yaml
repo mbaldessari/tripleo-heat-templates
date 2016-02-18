@@ -521,6 +521,7 @@ resources:
                 admin_password: {get_input: admin_password}
                 ntp::servers: {get_input: ntp_servers}
                 pacemaker_remote_pwd: {get_input: pacemaker_remote_password}
+                instance_ha: {get_input: instance_ha}
                 timezone::timezone: {get_input: timezone}
                 tripleo::packages::enable_install: {get_input: enable_package_install}
                 tripleo::packages::enable_upgrade: {get_input: enable_package_upgrade}
@@ -534,6 +535,7 @@ resources:
       server: {get_resource: NovaCompute}
       input_values:
         pacemaker_remote_password: {get_param: PacemakerRemotePassword}
+        instance_ha: {get_param: InstanceHA}
         cinder_enable_nfs_backend: {get_param: CinderEnableNfsBackend}
         debug: {get_param: Debug}
         nova_compute_driver: {get_param: NovaComputeDriver}
