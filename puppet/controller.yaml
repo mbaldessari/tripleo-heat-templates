@@ -258,6 +258,10 @@ parameters:
     default: 'REBUILD_PRESERVE_EPHEMERAL'
     description: What policy to use when reconstructing instances. REBUILD for rebuilds, REBUILD_PRESERVE_EPHEMERAL to preserve /mnt.
     type: string
+  InstanceHA:
+    default: false
+    description: Set this to true if you want instance HA deployed out of the box
+    type: boolean
   InstanceNameTemplate:
     default: 'instance-%08x'
     description: Template string to be used to generate instance names
@@ -865,6 +869,7 @@ resources:
       server: {get_resource: Controller}
       input_values:
         bootstack_nodeid: {get_attr: [Controller, name]}
+        instance_ha: {get_param: InstanceHA}
         ceilometer_workers: {get_param: CeilometerWorkers}
         cinder_workers: {get_param: CinderWorkers}
         glance_workers: {get_param: GlanceWorkers}

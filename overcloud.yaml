@@ -88,6 +88,10 @@ parameters:
     default: 'REBUILD_PRESERVE_EPHEMERAL'
     description: What policy to use when reconstructing instances. REBUILD for rebuilds, REBUILD_PRESERVE_EPHEMERAL to preserve /mnt.
     type: string
+  InstanceHA:
+    default: false
+    description: Set this to true if you want instance HA deployed out of the box
+    type: boolean
   KeyName:
     default: default
     description: Name of an existing Nova key pair to enable SSH access to the instances
@@ -890,6 +894,7 @@ resources:
           Image: {get_param: controllerImage}
           ImageUpdatePolicy: {get_param: ImageUpdatePolicy}
           InstanceNameTemplate: {get_param: InstanceNameTemplate}
+          InstranceHA: {get_param: InstanceHA}
           KeyName: {get_param: KeyName}
           KeystoneCACertificate: {get_param: KeystoneCACertificate}
           KeystoneSigningCertificate: {get_param: KeystoneSigningCertificate}
@@ -1000,6 +1005,7 @@ resources:
           GlanceHost: {get_attr: [VipMap, net_ip_map, {get_param: [ServiceNetMap, GlanceApiNetwork]}]}
           Image: {get_param: NovaImage}
           ImageUpdatePolicy: {get_param: ImageUpdatePolicy}
+          InstanceHA: {get_param: InstanceHA}
           KeyName: {get_param: KeyName}
           KeystoneAdminApiVirtualIP: {get_attr: [VipMap, net_ip_map, {get_param: [ServiceNetMap, KeystoneAdminApiNetwork]}]}
           KeystonePublicApiVirtualIP: {get_attr: [VipMap, net_ip_map, {get_param: [ServiceNetMap, KeystonePublicApiNetwork]}]}
