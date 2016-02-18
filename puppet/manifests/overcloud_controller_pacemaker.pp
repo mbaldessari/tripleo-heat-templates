@@ -2328,13 +2328,13 @@ if hiera('step') >= 4 {
 if hiera('step') >= 5 {
 
   if $pacemaker_master {
-
-    class {'::keystone::roles::admin' :
-      require => Pacemaker::Resource::Service[$::keystone::params::service_name],
-    } ->
-    class {'::keystone::endpoint' :
-      require => Pacemaker::Resource::Service[$::keystone::params::service_name],
-    }
+    # FIXME
+    #class {'::keystone::roles::admin' :
+    #  require => Pacemaker::Resource::Service[$::keystone::params::service_name],
+    #} ->
+    #class {'::keystone::endpoint' :
+    #  require => Pacemaker::Resource::Service[$::keystone::params::service_name],
+    #}
     if $enable_fencing {
       include tripleo::fencing
       # FIXME: Currently we set up the compute fencing resources under the pacemaker_master branch
