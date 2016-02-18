@@ -894,7 +894,7 @@ resources:
           Image: {get_param: controllerImage}
           ImageUpdatePolicy: {get_param: ImageUpdatePolicy}
           InstanceNameTemplate: {get_param: InstanceNameTemplate}
-          InstranceHA: {get_param: InstanceHA}
+          InstanceHA: {get_param: InstanceHA}
           KeyName: {get_param: KeyName}
           KeystoneCACertificate: {get_param: KeystoneCACertificate}
           KeystoneSigningCertificate: {get_param: KeystoneSigningCertificate}
