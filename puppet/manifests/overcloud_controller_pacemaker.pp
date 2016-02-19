@@ -63,6 +63,8 @@ if $::hostname == downcase(hiera('bootstrap_nodeid')) {
   $sync_db = false
 }
 
+$instance_ha = hiera('instance_ha')
+
 $enable_fencing = str2bool(hiera('enable_fencing', false)) and hiera('step') >= 5
 $enable_load_balancer = hiera('enable_load_balancer', true)
 
@@ -115,11 +117,12 @@ if hiera('step') >= 1 {
     Class['tripleo::fencing'] -> Class['pacemaker::stonith']
   }
 
-  # Step 11 - pacemaker puppet module does not have a property class unfortunately
-  class { "pcmk_node_tag_controller":
-    node => $controller_node_names,
+  # Step 11
+  if $instance_ha {
+    class { "pcmk_node_tag_controller":
+      node => $controller_node_names,
+    }
   }
-
 
   # FIXME(gfidente): sets 200secs as default start timeout op
   # param; until we can use pcmk global defaults we'll still
@@ -235,24 +238,27 @@ if hiera('step') >= 2 {
       pacemaker::resource::service { 'haproxy':
         clone_params => true,
       }
-      pacemaker::constraint::location_rule { 'haproxy-controller':
-        resource           => 'haproxy-clone',
-        expression         => 'osprole eq controller',
-        resource_discovery => 'exclusive',
-        score              => 0,
-        require            => Pacemaker::Resource::Service['haproxy'],
+      if $instance_ha {
+        pacemaker::constraint::location_rule { 'haproxy-controller':
+          resource           => 'haproxy-clone',
+          expression         => 'osprole eq controller',
+          resource_discovery => 'exclusive',
+          score              => 0,
+          require            => Pacemaker::Resource::Service['haproxy'],
+        }
       }
-
       $control_vip = hiera('tripleo::loadbalancer::controller_virtual_ip')
       pacemaker::resource::ip { 'control_vip':
         ip_address => $control_vip,
       }
-      pacemaker::constraint::location_rule { 'controller_vip-ctrl':
-        resource           => "ip-${control_vip}",
-        expression         => 'osprole eq controller',
-        resource_discovery => 'exclusive',
-        score              => 0,
-        require            => Pacemaker::Resource::Ip['control_vip'],
+      if $instance_ha {
+        pacemaker::constraint::location_rule { 'controller_vip-ctrl':
+          resource           => "ip-${control_vip}",
+          expression         => 'osprole eq controller',
+          resource_discovery => 'exclusive',
+          score              => 0,
+          require            => Pacemaker::Resource::Ip['control_vip'],
+       }
       }
       pacemaker::constraint::base { 'control_vip-then-haproxy':
         constraint_type   => 'order',
@@ -277,12 +283,14 @@ if hiera('step') >= 2 {
         pacemaker::resource::ip { 'public_vip':
           ip_address => $public_vip,
         }
-        pacemaker::constraint::location_rule { 'public_vip-ctrl':
-          resource           => "ip-${public_vip}",
-          expression         => 'osprole eq controller',
-          resource_discovery => 'exclusive',
-          score              => 0,
-          require            => Pacemaker::Resource::Ip['public_vip'],
+        if $instance_ha {
+          pacemaker::constraint::location_rule { 'public_vip-ctrl':
+            resource           => "ip-${public_vip}",
+            expression         => 'osprole eq controller',
+            resource_discovery => 'exclusive',
+            score              => 0,
+            require            => Pacemaker::Resource::Ip['public_vip'],
+          }
         }
         pacemaker::constraint::base { 'public_vip-then-haproxy':
           constraint_type   => 'order',
@@ -308,12 +316,14 @@ if hiera('step') >= 2 {
         pacemaker::resource::ip { 'redis_vip':
           ip_address => $redis_vip,
         }
-        pacemaker::constraint::location_rule { 'redis_vip-ctrl':
-          resource           => "ip-${redis_vip}",
-          expression         => 'osprole eq controller',
-          resource_discovery => 'exclusive',
-          score              => 0,
-          require            => Pacemaker::Resource::Ip['redis_vip'],
+        if $instance_ha {
+          pacemaker::constraint::location_rule { 'redis_vip-ctrl':
+            resource           => "ip-${redis_vip}",
+            expression         => 'osprole eq controller',
+            resource_discovery => 'exclusive',
+            score              => 0,
+            require            => Pacemaker::Resource::Ip['redis_vip'],
+          }
         }
         pacemaker::constraint::base { 'redis_vip-then-haproxy':
           constraint_type   => 'order',
@@ -339,12 +349,14 @@ if hiera('step') >= 2 {
         pacemaker::resource::ip { 'internal_api_vip':
           ip_address => $internal_api_vip,
         }
-        pacemaker::constraint::location_rule { 'internal_vip-ctrl':
-          resource           => "ip-${internal_api_vip}",
-          expression         => 'osprole eq controller',
-          resource_discovery => 'exclusive',
-          score              => 0,
-          require            => Pacemaker::Resource::Ip['internal_api_vip'],
+        if $instance_ha {
+          pacemaker::constraint::location_rule { 'internal_vip-ctrl':
+            resource           => "ip-${internal_api_vip}",
+            expression         => 'osprole eq controller',
+            resource_discovery => 'exclusive',
+            score              => 0,
+            require            => Pacemaker::Resource::Ip['internal_api_vip'],
+          }
         }
         pacemaker::constraint::base { 'internal_api_vip-then-haproxy':
           constraint_type   => 'order',
@@ -370,12 +382,14 @@ if hiera('step') >= 2 {
         pacemaker::resource::ip { 'storage_vip':
           ip_address => $storage_vip,
         }
-        pacemaker::constraint::location_rule { 'storage_vip-ctrl':
-          resource           => "ip-${storage_vip}",
-          expression         => 'osprole eq controller',
-          resource_discovery => 'exclusive',
-          score              => 0,
-          require            => Pacemaker::Resource::Ip['storage_vip'],
+        if $instance_ha {
+          pacemaker::constraint::location_rule { 'storage_vip-ctrl':
+            resource           => "ip-${storage_vip}",
+            expression         => 'osprole eq controller',
+            resource_discovery => 'exclusive',
+            score              => 0,
+            require            => Pacemaker::Resource::Ip['storage_vip'],
+          }
         }
         pacemaker::constraint::base { 'storage_vip-then-haproxy':
           constraint_type   => 'order',
@@ -401,12 +415,14 @@ if hiera('step') >= 2 {
         pacemaker::resource::ip { 'storage_mgmt_vip':
           ip_address => $storage_mgmt_vip,
         }
-        pacemaker::constraint::location_rule { 'storage_mgmt_vip-ctrl':
-          resource           => "ip-${storage_mgmt_vip}",
-          expression         => 'osprole eq controller',
-          resource_discovery => 'exclusive',
-          score              => 0,
-          require            => Pacemaker::Resource::Ip['storage_mgmt_vip'],
+        if $instance_ha {
+          pacemaker::constraint::location_rule { 'storage_mgmt_vip-ctrl':
+            resource           => "ip-${storage_mgmt_vip}",
+            expression         => 'osprole eq controller',
+            resource_discovery => 'exclusive',
+            score              => 0,
+            require            => Pacemaker::Resource::Ip['storage_mgmt_vip'],
+          }
         }
         pacemaker::constraint::base { 'storage_mgmt_vip-then-haproxy':
           constraint_type   => 'order',
@@ -433,14 +449,15 @@ if hiera('step') >= 2 {
       clone_params => 'interleave=true',
       require      => Class['::memcached'],
     }
-    pacemaker::constraint::location_rule { "${::memcached::params::service_name}-controller":
-      resource           => "${::memcached::params::service_name}-clone",
-      expression         => 'osprole eq controller',
-      resource_discovery => 'exclusive',
-      score              => 0,
-      require            => Pacemaker::Resource::Service[$::memcached::params::service_name],
+    if $instance_ha {
+      pacemaker::constraint::location_rule { "${::memcached::params::service_name}-controller":
+        resource           => "${::memcached::params::service_name}-clone",
+        expression         => 'osprole eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Service[$::memcached::params::service_name],
+      }
     }
-
 
     pacemaker::resource::ocf { 'rabbitmq':
       ocf_agent_name  => 'heartbeat:rabbitmq-cluster',
@@ -448,26 +465,29 @@ if hiera('step') >= 2 {
       clone_params    => 'ordered=true interleave=true',
       require         => Class['::rabbitmq'],
     }
-    pacemaker::constraint::location_rule { "rabbitmq-controller":
-      resource           => "rabbitmq-clone",
-      expression         => 'osprole eq controller',
-      resource_discovery => 'exclusive',
-      score              => 0,
-      require            => Pacemaker::Resource::Ocf["rabbitmq"],
+    if $instance_ha {
+      pacemaker::constraint::location_rule { "rabbitmq-controller":
+        resource           => "rabbitmq-clone",
+        expression         => 'osprole eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Ocf["rabbitmq"],
+      }
     }
-
     if downcase(hiera('ceilometer_backend')) == 'mongodb' {
       pacemaker::resource::service { $::mongodb::params::service_name :
         op_params    => 'start timeout=370s stop timeout=200s',
         clone_params => true,
         require      => Class['::mongodb::server'],
       }
-      pacemaker::constraint::location_rule { "${::mongodb::params::service_name}-controller":
-        resource           => "${::mongodb::params::service_name}-clone",
-        expression         => 'osprole eq controller',
-        resource_discovery => 'exclusive',
-        score              => 0,
-        require            => Pacemaker::Resource::Service[$::mongodb::params::service_name],
+      if $instance_ha {
+        pacemaker::constraint::location_rule { "${::mongodb::params::service_name}-controller":
+          resource           => "${::mongodb::params::service_name}-clone",
+          expression         => 'osprole eq controller',
+          resource_discovery => 'exclusive',
+          score              => 0,
+          require            => Pacemaker::Resource::Service[$::mongodb::params::service_name],
+        }
       }
       # NOTE (spredzy) : The replset can only be run
       # once all the nodes have joined the cluster.
@@ -490,12 +510,14 @@ if hiera('step') >= 2 {
       require         => Class['::mysql::server'],
       before          => Exec['galera-ready'],
     }
-    pacemaker::constraint::location_rule { "galera-controller":
-      resource           => "galera-master",
-      expression         => 'osprole eq controller',
-      resource_discovery => 'exclusive',
-      score              => 0,
-      require            => Pacemaker::Resource::Ocf['galera'],
+    if $instance_ha {
+      pacemaker::constraint::location_rule { "galera-controller":
+        resource           => "galera-master",
+        expression         => 'osprole eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Ocf['galera'],
+      }
     }
 
     pacemaker::resource::ocf { 'redis':
@@ -505,14 +527,15 @@ if hiera('step') >= 2 {
       resource_params => 'wait_last_known_master=true',
       require         => Class['::redis'],
     }
-    pacemaker::constraint::location_rule { "redis-controller":
-      resource           => "redis-master",
-      expression         => 'osprole eq controller',
-      resource_discovery => 'exclusive',
-      score              => 0,
-      require            => Pacemaker::Resource::Ocf['redis'],
+    if $instance_ha {
+      pacemaker::constraint::location_rule { "redis-controller":
+        resource           => "redis-master",
+        expression         => 'osprole eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Ocf['redis'],
+      }
     }
-
   }
 
   exec { 'galera-ready' :
@@ -1183,12 +1206,14 @@ if hiera('step') >= 4 {
                             File['/etc/keystone/ssl/private/signing_key.pem'],
                             File['/etc/keystone/ssl/certs/signing_cert.pem']],
     }
-    pacemaker::constraint::location_rule { "${::keystone::params::service_name}-controller":
-      resource           => "${::keystone::params::service_name}-clone",
-      expression         => 'osprole eq controller',
-      resource_discovery => 'exclusive',
-      score              => 0,
-      require            => Pacemaker::Resource::Service[$::keystone::params::service_name],
+    if $instance_ha {
+      pacemaker::constraint::location_rule { "${::keystone::params::service_name}-controller":
+        resource           => "${::keystone::params::service_name}-clone",
+        expression         => 'osprole eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Service[$::keystone::params::service_name],
+      }
     }
     if $enable_load_balancer {
       pacemaker::constraint::base { 'haproxy-then-keystone-constraint':
@@ -1234,32 +1259,37 @@ if hiera('step') >= 4 {
       clone_params => 'interleave=true',
       require      => Pacemaker::Resource::Service[$::keystone::params::service_name],
     }
-    pacemaker::constraint::location_rule { "${::cinder::params::api_service}-controller":
-      resource           => "${::cinder::params::api_service}-clone",
-      expression         => 'osprole eq controller',
-      resource_discovery => 'exclusive',
-      score              => 0,
-      require            => Pacemaker::Resource::Service[$::cinder::params::api_service],
+    if $instance_ha {
+      pacemaker::constraint::location_rule { "${::cinder::params::api_service}-controller":
+        resource           => "${::cinder::params::api_service}-clone",
+        expression         => 'osprole eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Service[$::cinder::params::api_service],
+      }
     }
     pacemaker::resource::service { $::cinder::params::scheduler_service :
       clone_params => 'interleave=true',
     }
-    pacemaker::constraint::location_rule { "${::cinder::params::scheduler_service}-controller":
-      resource           => "${::cinder::params::scheduler_service}-clone",
-      expression         => 'osprole eq controller',
-      resource_discovery => 'exclusive',
-      score              => 0,
-      require            => Pacemaker::Resource::Service[$::cinder::params::scheduler_service],
+    if $instance_ha {
+      pacemaker::constraint::location_rule { "${::cinder::params::scheduler_service}-controller":
+        resource           => "${::cinder::params::scheduler_service}-clone",
+        expression         => 'osprole eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Service[$::cinder::params::scheduler_service],
+      }
     }
     pacemaker::resource::service { $::cinder::params::volume_service : }
-    pacemaker::constraint::location_rule { "${::cinder::params::volume_service}-controller":
-      resource           => "${::cinder::params::volume_service}",
-      expression         => 'osprole eq controller',
-      resource_discovery => 'exclusive',
-      score              => 0,
-      require            => Pacemaker::Resource::Service[$::cinder::params::volume_service],
+    if $instance_ha {
+      pacemaker::constraint::location_rule { "${::cinder::params::volume_service}-controller":
+        resource           => "${::cinder::params::volume_service}",
+        expression         => 'osprole eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Service[$::cinder::params::volume_service],
+      }
     }
-
     pacemaker::constraint::base { 'keystone-then-cinder-api-constraint':
       constraint_type => 'order',
       first_resource  => "${::keystone::params::service_name}-clone",
@@ -1325,22 +1355,26 @@ if hiera('step') >= 4 {
       clone_params => 'interleave=true',
       require      => Pacemaker::Resource::Service[$::keystone::params::service_name],
     }
-    pacemaker::constraint::location_rule { "${::glance::params::registry_service_name}-controller":
-      resource           => "${::glance::params::registry_service_name}-clone",
-      expression         => 'osprole eq controller',
-      resource_discovery => 'exclusive',
-      score              => 0,
-      require            => Pacemaker::Resource::Service[$::glance::params::registry_service_name],
+    if $instance_ha {
+      pacemaker::constraint::location_rule { "${::glance::params::registry_service_name}-controller":
+        resource           => "${::glance::params::registry_service_name}-clone",
+        expression         => 'osprole eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Service[$::glance::params::registry_service_name],
+      }
     }
     pacemaker::resource::service { $::glance::params::api_service_name :
       clone_params => 'interleave=true',
     }
-    pacemaker::constraint::location_rule { "${::glance::params::api_service_name}-controller":
-      resource           => "${::glance::params::api_service_name}-clone",
-      expression         => 'osprole eq controller',
-      resource_discovery => 'exclusive',
-      score              => 0,
-      require            => Pacemaker::Resource::Service[$::glance::params::api_service_name],
+    if $instance_ha {
+      pacemaker::constraint::location_rule { "${::glance::params::api_service_name}-controller":
+        resource           => "${::glance::params::api_service_name}-clone",
+        expression         => 'osprole eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Service[$::glance::params::api_service_name],
+      }
     }
 
     pacemaker::constraint::base { 'keystone-then-glance-registry-constraint':
@@ -1396,71 +1430,83 @@ if hiera('step') >= 4 {
         require      => Pacemaker::Resource::Service[$::keystone::params::service_name]
       }
     }
-    pacemaker::constraint::location_rule { "${::neutron::params::server_service}-controller":
-      resource           => "${::neutron::params::server_service}-clone",
-      expression         => 'osprole eq controller',
-      resource_discovery => 'exclusive',
-      score              => 0,
-      require            => Pacemaker::Resource::Service[$::neutron::params::server_service],
+    if $instance_ha {
+      pacemaker::constraint::location_rule { "${::neutron::params::server_service}-controller":
+        resource           => "${::neutron::params::server_service}-clone",
+        expression         => 'osprole eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Service[$::neutron::params::server_service],
+      }
     }
     if hiera('neutron::enable_l3_agent', true) {
       pacemaker::resource::service { $::neutron::params::l3_agent_service:
         clone_params => 'interleave=true',
       }
-      pacemaker::constraint::location_rule { "${::neutron::params::l3_agent_service}-controller":
-        resource           => "${::neutron::params::l3_agent_service}-clone",
-        expression         => 'osprole eq controller',
-        resource_discovery => 'exclusive',
-        score              => 0,
-        require            => Pacemaker::Resource::Service[$::neutron::params::l3_agent_service],
+      if $instance_ha {
+        pacemaker::constraint::location_rule { "${::neutron::params::l3_agent_service}-controller":
+          resource           => "${::neutron::params::l3_agent_service}-clone",
+          expression         => 'osprole eq controller',
+          resource_discovery => 'exclusive',
+          score              => 0,
+          require            => Pacemaker::Resource::Service[$::neutron::params::l3_agent_service],
+        }
       }
     }
     if hiera('neutron::enable_dhcp_agent', true) {
       pacemaker::resource::service { $::neutron::params::dhcp_agent_service:
         clone_params => 'interleave=true',
       }
-      pacemaker::constraint::location_rule { "${::neutron::params::dhcp_agent_service}-controller":
-        resource           => "${::neutron::params::dhcp_agent_service}-clone",
-        expression         => 'osprole eq controller',
-        resource_discovery => 'exclusive',
-        score              => 0,
-        require            => Pacemaker::Resource::Service[$::neutron::params::dhcp_agent_service],
+      if $instance_ha {
+        pacemaker::constraint::location_rule { "${::neutron::params::dhcp_agent_service}-controller":
+          resource           => "${::neutron::params::dhcp_agent_service}-clone",
+          expression         => 'osprole eq controller',
+          resource_discovery => 'exclusive',
+          score              => 0,
+          require            => Pacemaker::Resource::Service[$::neutron::params::dhcp_agent_service],
+        }
       }
     }
     if hiera('neutron::enable_ovs_agent', true) {
       pacemaker::resource::service { $::neutron::params::ovs_agent_service:
         clone_params => 'interleave=true',
       }
-      pacemaker::constraint::location_rule { "${::neutron::params::ovs_agent_service}-controller":
-        resource           => "${::neutron::params::ovs_agent_service}-clone",
-        expression         => 'osprole eq controller',
-        resource_discovery => 'exclusive',
-        score              => 0,
-        require            => Pacemaker::Resource::Service[$::neutron::params::ovs_agent_service],
+      if $instance_ha {
+        pacemaker::constraint::location_rule { "${::neutron::params::ovs_agent_service}-controller":
+          resource           => "${::neutron::params::ovs_agent_service}-clone",
+          expression         => 'osprole eq controller',
+          resource_discovery => 'exclusive',
+          score              => 0,
+          require            => Pacemaker::Resource::Service[$::neutron::params::ovs_agent_service],
+        }
       }
     }
     if hiera('neutron::core_plugin') == 'midonet.neutron.plugin_v1.MidonetPluginV2' {
       pacemaker::resource::service {'tomcat':
         clone_params => 'interleave=true',
       }
-      pacemaker::constraint::location_rule { "tomcat-controller":
-        resource           => 'tomcat-clone',
-        expression         => 'osprole eq controller',
-        resource_discovery => 'exclusive',
-        score              => 0,
-        require            => 'tomcat',
+      if $instance_ha {
+        pacemaker::constraint::location_rule { "tomcat-controller":
+          resource           => 'tomcat-clone',
+          expression         => 'osprole eq controller',
+          resource_discovery => 'exclusive',
+          score              => 0,
+          require            => 'tomcat',
+        }
       }
     }
     if hiera('neutron::enable_metadata_agent', true) {
       pacemaker::resource::service { $::neutron::params::metadata_agent_service:
         clone_params => 'interleave=true',
       }
-      pacemaker::constraint::location_rule { "${::neutron::params::metadata_agent_service}-controller":
-        resource           => "${::neutron::params::metadata_agent_service}-clone",
-        expression         => 'osprole eq controller',
-        resource_discovery => 'exclusive',
-        score              => 0,
-        require            => Pacemaker::Resource::Service[$::neutron::params::metadata_agent_service],
+      if $instance_ha {
+        pacemaker::constraint::location_rule { "${::neutron::params::metadata_agent_service}-controller":
+          resource           => "${::neutron::params::metadata_agent_service}-clone",
+          expression         => 'osprole eq controller',
+          resource_discovery => 'exclusive',
+          score              => 0,
+          require            => Pacemaker::Resource::Service[$::neutron::params::metadata_agent_service],
+        }
       }
     }
     if hiera('neutron::enable_ovs_agent', true) {
@@ -1468,23 +1514,27 @@ if hiera('step') >= 4 {
         ocf_agent_name => 'neutron:OVSCleanup',
         clone_params   => 'interleave=true',
       }
-      pacemaker::constraint::location_rule { "${::neutron::params::ovs_cleanup_service}-controller":
-        resource           => "${::neutron::params::ovs_cleanup_service}-clone",
-        expression         => 'osprole eq controller',
-        resource_discovery => 'exclusive',
-        score              => 0,
-        require            => Pacemaker::Resource::Ocf[$::neutron::params::ovs_cleanup_service],
+      if $instance_ha {
+        pacemaker::constraint::location_rule { "${::neutron::params::ovs_cleanup_service}-controller":
+          resource           => "${::neutron::params::ovs_cleanup_service}-clone",
+          expression         => 'osprole eq controller',
+          resource_discovery => 'exclusive',
+          score              => 0,
+          require            => Pacemaker::Resource::Ocf[$::neutron::params::ovs_cleanup_service],
+        }
       }
       pacemaker::resource::ocf { 'neutron-netns-cleanup':
         ocf_agent_name => 'neutron:NetnsCleanup',
         clone_params   => 'interleave=true',
       }
-      pacemaker::constraint::location_rule { "neutron-netns-cleanup-controller":
-        resource           => 'neutron-netns-cleanup-clone',
-        expression         => 'osprole eq controller',
-        resource_discovery => 'exclusive',
-        score              => 0,
-        require            => Pacemaker::Resource::Ocf['neutron-netns-cleanup'],
+      if $instance_ha {
+        pacemaker::constraint::location_rule { "neutron-netns-cleanup-controller":
+          resource           => 'neutron-netns-cleanup-clone',
+          expression         => 'osprole eq controller',
+          resource_discovery => 'exclusive',
+          score              => 0,
+          require            => Pacemaker::Resource::Ocf['neutron-netns-cleanup'],
+        }
       }
 
       # neutron - one chain ovs-cleanup-->netns-cleanup-->ovs-agent
@@ -1766,57 +1816,67 @@ if hiera('step') >= 4 {
       clone_params => 'interleave=true',
       op_params    => 'start timeout=200s stop timeout=200s monitor start-delay=10s',
     }
-    pacemaker::constraint::location_rule { "${::nova::params::api_service_name}-controller":
-      resource           => "${::nova::params::api_service_name}-clone",
-      expression         => 'osprole eq controller',
-      resource_discovery => 'exclusive',
-      score              => 0,
-      require            => Pacemaker::Resource::Service[$::nova::params::api_service_name],
+    if $instance_ha {
+      pacemaker::constraint::location_rule { "${::nova::params::api_service_name}-controller":
+        resource           => "${::nova::params::api_service_name}-clone",
+        expression         => 'osprole eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Service[$::nova::params::api_service_name],
+      }
     }
     pacemaker::resource::service { $::nova::params::conductor_service_name :
       clone_params => 'interleave=true',
       op_params    => 'start timeout=200s stop timeout=200s monitor start-delay=10s',
     }
-    pacemaker::constraint::location_rule { "${::nova::params::conductor_service_name}-controller":
-      resource           => "${::nova::params::conductor_service_name}-clone",
-      expression         => 'osprole eq controller',
-      resource_discovery => 'exclusive',
-      score              => 0,
-      require            => Pacemaker::Resource::Service[$::nova::params::conductor_service_name],
+    if $instance_ha {
+      pacemaker::constraint::location_rule { "${::nova::params::conductor_service_name}-controller":
+        resource           => "${::nova::params::conductor_service_name}-clone",
+        expression         => 'osprole eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Service[$::nova::params::conductor_service_name],
+      }
     }
     pacemaker::resource::service { $::nova::params::consoleauth_service_name :
       clone_params => 'interleave=true',
       op_params    => 'start timeout=200s stop timeout=200s monitor start-delay=10s',
       require      => Pacemaker::Resource::Service[$::keystone::params::service_name],
     }
-    pacemaker::constraint::location_rule { "${::nova::params::consoleauth_service_name}-controller":
-      resource           => "${::nova::params::consoleauth_service_name}-clone",
-      expression         => 'osprole eq controller',
-      resource_discovery => 'exclusive',
-      score              => 0,
-      require            => Pacemaker::Resource::Service[$::nova::params::consoleauth_service_name],
+    if $instance_ha {
+      pacemaker::constraint::location_rule { "${::nova::params::consoleauth_service_name}-controller":
+        resource           => "${::nova::params::consoleauth_service_name}-clone",
+        expression         => 'osprole eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Service[$::nova::params::consoleauth_service_name],
+      }
     }
     pacemaker::resource::service { $::nova::params::vncproxy_service_name :
       clone_params => 'interleave=true',
       op_params    => 'start timeout=200s stop timeout=200s monitor start-delay=10s',
     }
-    pacemaker::constraint::location_rule { "${::nova::params::vncproxy_service_name}-controller":
-      resource           => "${::nova::params::vncproxy_service_name}-clone",
-      expression         => 'osprole eq controller',
-      resource_discovery => 'exclusive',
-      score              => 0,
-      require            => Pacemaker::Resource::Service[$::nova::params::vncproxy_service_name],
+    if $instance_ha {
+      pacemaker::constraint::location_rule { "${::nova::params::vncproxy_service_name}-controller":
+        resource           => "${::nova::params::vncproxy_service_name}-clone",
+        expression         => 'osprole eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Service[$::nova::params::vncproxy_service_name],
+      }
     }
     pacemaker::resource::service { $::nova::params::scheduler_service_name :
       clone_params => 'interleave=true',
       op_params    => 'start timeout=200s stop timeout=200s monitor start-delay=10s',
     }
-    pacemaker::constraint::location_rule { "${::nova::params::scheduler_service_name}-controller":
-      resource           => "${::nova::params::scheduler_service_name}-clone",
-      expression         => 'osprole eq controller',
-      resource_discovery => 'exclusive',
-      score              => 0,
-      require            => Pacemaker::Resource::Service[$::nova::params::scheduler_service_name],
+    if $instance_ha {
+      pacemaker::constraint::location_rule { "${::nova::params::scheduler_service_name}-controller":
+        resource           => "${::nova::params::scheduler_service_name}-clone",
+        expression         => 'osprole eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Service[$::nova::params::scheduler_service_name],
+      }
     }
 
     pacemaker::constraint::base { 'keystone-then-nova-consoleauth-constraint':
@@ -1909,54 +1969,64 @@ if hiera('step') >= 4 {
         }
       }
     }
-    pacemaker::constraint::location_rule { "${::ceilometer::params::agent_central_service_name}-controller":
-      resource           => "${::ceilometer::params::agent_central_service_name}-clone",
-      expression         => 'osprole eq controller',
-      resource_discovery => 'exclusive',
-      score              => 0,
-      require            => Pacemaker::Resource::Service[$::ceilometer::params::agent_central_service_name],
+    if $instance_ha {
+      pacemaker::constraint::location_rule { "${::ceilometer::params::agent_central_service_name}-controller":
+        resource           => "${::ceilometer::params::agent_central_service_name}-clone",
+        expression         => 'osprole eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Service[$::ceilometer::params::agent_central_service_name],
+      }
     }
     pacemaker::resource::service { $::ceilometer::params::collector_service_name :
       clone_params => 'interleave=true',
     }
-    pacemaker::constraint::location_rule { "${::ceilometer::params::collector_service_name}-controller":
-      resource           => "${::ceilometer::params::collector_service_name}-clone",
-      expression         => 'osprole eq controller',
-      resource_discovery => 'exclusive',
-      score              => 0,
-      require            => Pacemaker::Resource::Service[$::ceilometer::params::collector_service_name],
+    if $instance_ha {
+      pacemaker::constraint::location_rule { "${::ceilometer::params::collector_service_name}-controller":
+        resource           => "${::ceilometer::params::collector_service_name}-clone",
+        expression         => 'osprole eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Service[$::ceilometer::params::collector_service_name],
+      }
     }
     pacemaker::resource::service { $::ceilometer::params::api_service_name :
       clone_params => 'interleave=true',
     }
-    pacemaker::constraint::location_rule { "${::ceilometer::params::api_service_name}-controller":
-      resource           => "${::ceilometer::params::api_service_name}-clone",
-      expression         => 'osprole eq controller',
-      resource_discovery => 'exclusive',
-      score              => 0,
-      require            => Pacemaker::Resource::Service[$::ceilometer::params::api_service_name],
+    if $instance_ha {
+      pacemaker::constraint::location_rule { "${::ceilometer::params::api_service_name}-controller":
+        resource           => "${::ceilometer::params::api_service_name}-clone",
+        expression         => 'osprole eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Service[$::ceilometer::params::api_service_name],
+      }
     }
     pacemaker::resource::service { $::ceilometer::params::agent_notification_service_name :
       clone_params => 'interleave=true',
     }
-    pacemaker::constraint::location_rule { "${::ceilometer::params::agent_notification_service_name}-controller":
-      resource           => "${::ceilometer::params::agent_notification_service_name}-clone",
-      expression         => 'osprole eq controller',
-      resource_discovery => 'exclusive',
-      score              => 0,
-      require            => Pacemaker::Resource::Service[$::ceilometer::params::agent_notification_service_name],
+    if $instance_ha {
+      pacemaker::constraint::location_rule { "${::ceilometer::params::agent_notification_service_name}-controller":
+        resource           => "${::ceilometer::params::agent_notification_service_name}-clone",
+        expression         => 'osprole eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Service[$::ceilometer::params::agent_notification_service_name],
+      }
     }
     pacemaker::resource::ocf { 'delay' :
       ocf_agent_name  => 'heartbeat:Delay',
       clone_params    => 'interleave=true',
       resource_params => 'startdelay=10',
     }
-    pacemaker::constraint::location_rule { 'delay-controller':
-      resource           => "delay-clone",
-      expression         => 'osprole eq controller',
-      resource_discovery => 'exclusive',
-      score              => 0,
-      require            => Pacemaker::Resource::Ocf['delay'],
+    if $instance_ha {
+      pacemaker::constraint::location_rule { 'delay-controller':
+        resource           => "delay-clone",
+        expression         => 'osprole eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Ocf['delay'],
+      }
     }
     # Fedora doesn't know `require-all` parameter for constraints yet
     if $::operatingsystem == 'Fedora' {
@@ -2040,42 +2110,50 @@ if hiera('step') >= 4 {
     pacemaker::resource::service { $::heat::params::api_service_name :
       clone_params => 'interleave=true',
     }
-    pacemaker::constraint::location_rule { "${::heat::params::api_service_name}-controller":
-      resource           => "${::heat::params::api_service_name}-clone",
-      expression         => 'osprole eq controller',
-      resource_discovery => 'exclusive',
-      score              => 0,
-      require            => Pacemaker::Resource::Service[$::heat::params::api_service_name],
+    if $instance_ha {
+      pacemaker::constraint::location_rule { "${::heat::params::api_service_name}-controller":
+        resource           => "${::heat::params::api_service_name}-clone",
+        expression         => 'osprole eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Service[$::heat::params::api_service_name],
+      }
     }
     pacemaker::resource::service { $::heat::params::api_cloudwatch_service_name :
       clone_params => 'interleave=true',
     }
-    pacemaker::constraint::location_rule { "${::heat::params::api_cloudwatch_service_name}-controller":
-      resource           => "${::heat::params::api_cloudwatch_service_name}-clone",
-      expression         => 'osprole eq controller',
-      resource_discovery => 'exclusive',
-      score              => 0,
-      require            => Pacemaker::Resource::Service[$::heat::params::api_cloudwatch_service_name],
+    if $instance_ha {
+      pacemaker::constraint::location_rule { "${::heat::params::api_cloudwatch_service_name}-controller":
+        resource           => "${::heat::params::api_cloudwatch_service_name}-clone",
+        expression         => 'osprole eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Service[$::heat::params::api_cloudwatch_service_name],
+      }
     }
     pacemaker::resource::service { $::heat::params::api_cfn_service_name :
       clone_params => 'interleave=true',
     }
-    pacemaker::constraint::location_rule { "${::heat::params::api_cfn_service_name}-controller":
-      resource           => "${::heat::params::api_cfn_service_name}-clone",
-      expression         => 'osprole eq controller',
-      resource_discovery => 'exclusive',
-      score              => 0,
-      require            => Pacemaker::Resource::Service[$::heat::params::api_cfn_service_name],
+    if $instance_ha {
+      pacemaker::constraint::location_rule { "${::heat::params::api_cfn_service_name}-controller":
+        resource           => "${::heat::params::api_cfn_service_name}-clone",
+        expression         => 'osprole eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Service[$::heat::params::api_cfn_service_name],
+      }
     }
     pacemaker::resource::service { $::heat::params::engine_service_name :
       clone_params => 'interleave=true',
     }
-    pacemaker::constraint::location_rule { "${::heat::params::engine_service_name}-controller":
-      resource           => "${::heat::params::engine_service_name}-clone",
-      expression         => 'osprole eq controller',
-      resource_discovery => 'exclusive',
-      score              => 0,
-      require            => Pacemaker::Resource::Service[$::heat::params::engine_service_name],
+    if $instance_ha {
+      pacemaker::constraint::location_rule { "${::heat::params::engine_service_name}-controller":
+        resource           => "${::heat::params::engine_service_name}-clone",
+        expression         => 'osprole eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Service[$::heat::params::engine_service_name],
+      }
     }
     pacemaker::constraint::base { 'keystone-then-heat-api-constraint':
       constraint_type => 'order',
@@ -2148,153 +2226,157 @@ if hiera('step') >= 4 {
     pacemaker::resource::service { $::horizon::params::http_service:
       clone_params => 'interleave=true',
     }
-    pacemaker::constraint::location_rule { "${::horizon::params::http_service}-controller":
-      resource           => "${::horizon::params::http_service}-clone",
-      expression         => 'osprole eq controller',
-      resource_discovery => 'exclusive',
-      score              => 0,
-      require            => Pacemaker::Resource::Service[$::horizon::params::http_service],
+    if $instance_ha {
+      pacemaker::constraint::location_rule { "${::horizon::params::http_service}-controller":
+        resource           => "${::horizon::params::http_service}-clone",
+        expression         => 'osprole eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Service[$::horizon::params::http_service],
+      }
     }
 
     # Add NovaEvacuate active/passive resource (step 7 of the article)
     # FIXME: without shared_storage=1 ?!? see newest env requirement
-    $pacemaker_admin_uri = hiera('pacemaker_admin_uri')
-    $admin_password = hiera('admin_password')
-    pacemaker::resource::ocf { 'nova-evacuate':
-      ocf_agent_name  => 'openstack:NovaEvacuate',
-      resource_params => "auth_url=${pacemaker_admin_uri} username=admin password=${admin_password} tenant_name=admin no_shared_storage=1",
-    }
-    pacemaker::constraint::location_rule { "nova-evacuate-controller":
-      resource           => 'nova-evacuate',
-      expression         => 'osprole eq controller',
-      resource_discovery => 'exclusive',
-      score              => 0,
-      require            => Pacemaker::Resource::Ocf['nova-evacuate'],
-    }
+    if $instance_ha {
+      $pacemaker_admin_uri = hiera('pacemaker_admin_uri')
+      $admin_password = hiera('admin_password')
+      pacemaker::resource::ocf { 'nova-evacuate':
+        ocf_agent_name  => 'openstack:NovaEvacuate',
+        resource_params => "auth_url=${pacemaker_admin_uri} username=admin password=${admin_password} tenant_name=admin no_shared_storage=1",
+      }
+      pacemaker::constraint::location_rule { "nova-evacuate-controller":
+        resource           => 'nova-evacuate',
+        expression         => 'osprole eq controller',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Ocf['nova-evacuate'],
+      }
 
-    # Step 8 - add constraints to start ip addresses first and then nova-evacuate
-    pacemaker::constraint::base { 'control_vip-then-nova-evacuate':
-      constraint_type   => 'order',
-      first_resource    => "ip-${control_vip}",
-      second_resource   => 'nova-evacuate',
-      first_action      => 'start',
-      second_action     => 'start',
-      require => [Pacemaker::Resource::Ocf['nova-evacuate'],
-                  Pacemaker::Resource::Ip['control_vip']],
-    }
-    if $public_vip and $public_vip != $control_vip {
-      pacemaker::constraint::base { 'public_vip-then-nova-evacuate':
+      # Step 8 - add constraints to start ip addresses first and then nova-evacuate
+      pacemaker::constraint::base { 'control_vip-then-nova-evacuate':
         constraint_type   => 'order',
-        first_resource    => "ip-${public_vip}",
+        first_resource    => "ip-${control_vip}",
         second_resource   => 'nova-evacuate',
         first_action      => 'start',
         second_action     => 'start',
         require => [Pacemaker::Resource::Ocf['nova-evacuate'],
-                    Pacemaker::Resource::Ip['public_vip']],
+                    Pacemaker::Resource::Ip['control_vip']],
       }
-    }
-    if $redis_vip and $redis_vip != $control_vip {
-      pacemaker::constraint::base { 'redis_vip-then-nova-evacuate':
+      if $public_vip and $public_vip != $control_vip {
+        pacemaker::constraint::base { 'public_vip-then-nova-evacuate':
+          constraint_type   => 'order',
+          first_resource    => "ip-${public_vip}",
+          second_resource   => 'nova-evacuate',
+          first_action      => 'start',
+          second_action     => 'start',
+          require => [Pacemaker::Resource::Ocf['nova-evacuate'],
+                      Pacemaker::Resource::Ip['public_vip']],
+        }
+      }
+      if $redis_vip and $redis_vip != $control_vip {
+        pacemaker::constraint::base { 'redis_vip-then-nova-evacuate':
+          constraint_type   => 'order',
+          first_resource    => "ip-${redis_vip}",
+          second_resource   => 'nova-evacuate',
+          first_action      => 'start',
+          second_action     => 'start',
+          require => [Pacemaker::Resource::Ocf['nova-evacuate'],
+                      Pacemaker::Resource::Ip['redis_vip']],
+        }
+      }
+      if $internal_api_vip and $internal_api_vip != $control_vip {
+        pacemaker::constraint::base { 'internal_api_vip-then-nova-evacuate':
+          constraint_type   => 'order',
+          first_resource    => "ip-${internal_api_vip}",
+          second_resource   => 'nova-evacuate',
+          first_action      => 'start',
+          second_action     => 'start',
+          require => [Pacemaker::Resource::Ocf['nova-evacuate'],
+                      Pacemaker::Resource::Ip['internal_api_vip']],
+        }
+      }
+      if $storage_vip and $storage_vip != $control_vip {
+        pacemaker::constraint::base { 'storage_vip-then-nova-evacuate':
+          constraint_type   => 'order',
+          first_resource    => "ip-${storage_vip}",
+          second_resource   => 'nova-evacuate',
+          first_action      => 'start',
+          second_action     => 'start',
+          require => [Pacemaker::Resource::Ocf['nova-evacuate'],
+                      Pacemaker::Resource::Ip['storage_vip']],
+        }
+      }
+      if $storage_mgmt_vip and $storage_mgmt_vip != $control_vip {
+        pacemaker::constraint::base { 'storage_mgmt_vip-then-nova-evacuate':
+          constraint_type   => 'order',
+          first_resource    => "ip-${storage_mgmt_vip}",
+          second_resource   => 'nova-evacuate',
+          first_action      => 'start',
+          second_action     => 'start',
+          require => [Pacemaker::Resource::Ocf['nova-evacuate'],
+                      Pacemaker::Resource::Ip['storage_mgmt_vip']],
+        }
+      }
+      # step 8 - openstack-glance-api-clone neutron-metadata-agent-clone openstack-nova-conductor-clone
+      # FIXME: require-all: fedora does not have require-all yet? Which version anyway
+      pacemaker::constraint::base { "${::glance::params::api_service_name}-then-nova-evacuate":
         constraint_type   => 'order',
-        first_resource    => "ip-${redis_vip}",
+        first_resource    => "${::glance::params::api_service_name}-clone",
         second_resource   => 'nova-evacuate',
         first_action      => 'start',
         second_action     => 'start',
+        constraint_params => 'require-all=false',
         require => [Pacemaker::Resource::Ocf['nova-evacuate'],
-                    Pacemaker::Resource::Ip['redis_vip']],
+                    Pacemaker::Resource::Service[$::glance::params::api_service_name]],
       }
-    }
-    if $internal_api_vip and $internal_api_vip != $control_vip {
-      pacemaker::constraint::base { 'internal_api_vip-then-nova-evacuate':
-        constraint_type   => 'order',
-        first_resource    => "ip-${internal_api_vip}",
-        second_resource   => 'nova-evacuate',
-        first_action      => 'start',
-        second_action     => 'start',
-        require => [Pacemaker::Resource::Ocf['nova-evacuate'],
-                    Pacemaker::Resource::Ip['internal_api_vip']],
-      }
-    }
-    if $storage_vip and $storage_vip != $control_vip {
-      pacemaker::constraint::base { 'storage_vip-then-nova-evacuate':
-        constraint_type   => 'order',
-        first_resource    => "ip-${storage_vip}",
-        second_resource   => 'nova-evacuate',
-        first_action      => 'start',
-        second_action     => 'start',
-        require => [Pacemaker::Resource::Ocf['nova-evacuate'],
-                    Pacemaker::Resource::Ip['storage_vip']],
-      }
-    }
-    if $storage_mgmt_vip and $storage_mgmt_vip != $control_vip {
-      pacemaker::constraint::base { 'storage_mgmt_vip-then-nova-evacuate':
-        constraint_type   => 'order',
-        first_resource    => "ip-${storage_mgmt_vip}",
-        second_resource   => 'nova-evacuate',
-        first_action      => 'start',
-        second_action     => 'start',
-        require => [Pacemaker::Resource::Ocf['nova-evacuate'],
-                    Pacemaker::Resource::Ip['storage_mgmt_vip']],
-      }
-    }
-    # step 8 - openstack-glance-api-clone neutron-metadata-agent-clone openstack-nova-conductor-clone
-    # FIXME: require-all: fedora does not have require-all yet? Which version anyway
-    pacemaker::constraint::base { "${::glance::params::api_service_name}-then-nova-evacuate":
-      constraint_type   => 'order',
-      first_resource    => "${::glance::params::api_service_name}-clone",
-      second_resource   => 'nova-evacuate',
-      first_action      => 'start',
-      second_action     => 'start',
-      constraint_params => 'require-all=false',
-      require => [Pacemaker::Resource::Ocf['nova-evacuate'],
-                  Pacemaker::Resource::Service[$::glance::params::api_service_name]],
-    }
 
-    pacemaker::constraint::base { "${::neutron::params::metadata_agent_service}-then-nova-evacuate":
-      constraint_type   => 'order',
-      first_resource    => "${::neutron::params::metadata_agent_service}-clone",
-      second_resource   => 'nova-evacuate',
-      first_action      => 'start',
-      second_action     => 'start',
-      constraint_params => 'require-all=false',
-      require => [Pacemaker::Resource::Ocf['nova-evacuate'],
-                  Pacemaker::Resource::Service[$::neutron::params::metadata_agent_service]],
-    }
+      pacemaker::constraint::base { "${::neutron::params::metadata_agent_service}-then-nova-evacuate":
+        constraint_type   => 'order',
+        first_resource    => "${::neutron::params::metadata_agent_service}-clone",
+        second_resource   => 'nova-evacuate',
+        first_action      => 'start',
+        second_action     => 'start',
+        constraint_params => 'require-all=false',
+        require => [Pacemaker::Resource::Ocf['nova-evacuate'],
+                    Pacemaker::Resource::Service[$::neutron::params::metadata_agent_service]],
+      }
 
-    pacemaker::constraint::base { "${::nova::params::conductor_service_name}-then-nova-evacuate":
-      constraint_type   => 'order',
-      first_resource    => "${::nova::params::conductor_service_name}-clone",
-      second_resource   => 'nova-evacuate',
-      first_action      => 'start',
-      second_action     => 'start',
-      constraint_params => 'require-all=false',
-      require => [Pacemaker::Resource::Ocf['nova-evacuate'],
-                  Pacemaker::Resource::Service[$::nova::params::conductor_service_name]],
-    }
-    
-    # Step 18 Instance HA
-    # Add resource pacemaker:remote for compute nodes
-    # FIXME: we need to guarantee that it happens as late as possible
-    # not sure nova-evacuate is enough as a dependency
-    $compute_node_names = split(downcase(hiera('compute_node_names')), ',')
-    pacemaker::resource::ocf { $compute_node_names:
-      ocf_agent_name  => 'pacemaker:remote',
-      meta_params     => 'reconnect_interval=60 op monitor interval=20',
-      require         => [Pacemaker::Resource::Ocf['nova-evacuate']],
-    } ->
-    class { "pcmk_node_tag_compute":
-      node => $compute_node_names,
-    } ->
-    exec { "fence-nova-stonith":
-      command => "/usr/sbin/pcs stonith create fence-nova fence_compute auth-url=${pacemaker_admin_uri} username=admin password=${admin_password} tenant_name=admin domain=localdomain record-only=1 action=off --force",
-      unless => "/usr/sbin/pcs stonith show fence-nova > /dev/null 2>&1",
-    } ->
-    exec { "cluster-recheck-interval":
-      command => "/usr/sbin/pcs property set cluster-recheck-interval=1min",
-    } ->
-    class { "pcmk_node_stonith_compute":
-      node => $compute_node_names,
-    }
+      pacemaker::constraint::base { "${::nova::params::conductor_service_name}-then-nova-evacuate":
+        constraint_type   => 'order',
+        first_resource    => "${::nova::params::conductor_service_name}-clone",
+        second_resource   => 'nova-evacuate',
+        first_action      => 'start',
+        second_action     => 'start',
+        constraint_params => 'require-all=false',
+        require => [Pacemaker::Resource::Ocf['nova-evacuate'],
+                    Pacemaker::Resource::Service[$::nova::params::conductor_service_name]],
+      }
+      
+      # Step 18 Instance HA
+      # Add resource pacemaker:remote for compute nodes
+      # FIXME: we need to guarantee that it happens as late as possible
+      # not sure nova-evacuate is enough as a dependency
+      $compute_node_names = split(downcase(hiera('compute_node_names')), ',')
+      pacemaker::resource::ocf { $compute_node_names:
+        ocf_agent_name  => 'pacemaker:remote',
+        meta_params     => 'reconnect_interval=60 op monitor interval=20',
+        require         => [Pacemaker::Resource::Ocf['nova-evacuate']],
+      } ->
+      class { "pcmk_node_tag_compute":
+        node => $compute_node_names,
+      } ->
+      exec { "fence-nova-stonith":
+        command => "/usr/sbin/pcs stonith create fence-nova fence_compute auth-url=${pacemaker_admin_uri} username=admin password=${admin_password} tenant_name=admin domain=localdomain record-only=1 action=off --force",
+        unless => "/usr/sbin/pcs stonith show fence-nova > /dev/null 2>&1",
+      } ->
+      exec { "cluster-recheck-interval":
+        command => "/usr/sbin/pcs property set cluster-recheck-interval=1min",
+      } ->
+      class { "pcmk_node_stonith_compute":
+        node => $compute_node_names,
+      }
+    } #instance_ha
 
     #VSM
     if 'cisco_n1kv' in hiera('neutron::plugins::ml2::mechanism_drivers') {
@@ -2328,13 +2410,18 @@ if hiera('step') >= 4 {
 if hiera('step') >= 5 {
 
   if $pacemaker_master {
-    # FIXME
-    #class {'::keystone::roles::admin' :
-    #  require => Pacemaker::Resource::Service[$::keystone::params::service_name],
-    #} ->
-    #class {'::keystone::endpoint' :
-    #  require => Pacemaker::Resource::Service[$::keystone::params::service_name],
-    #}
+    if $instance_ha {
+      # FIXME
+      notify {"meh":}
+    } 
+    else {
+      class {'::keystone::roles::admin' :
+        require => Pacemaker::Resource::Service[$::keystone::params::service_name],
+      } ->
+      class {'::keystone::endpoint' :
+        require => Pacemaker::Resource::Service[$::keystone::params::service_name],
+      }
+    }
     if $enable_fencing {
       include tripleo::fencing
       # FIXME: Currently we set up the compute fencing resources under the pacemaker_master branch

@@ -25,50 +25,56 @@ if count(hiera('ntp::servers')) > 0 {
 include ::timezone
 
 # When doing instance HA libvirt will be managed via pacemaker-remoted
-#file { ['/etc/libvirt/qemu/networks/autostart/default.xml',
-#        '/etc/libvirt/qemu/networks/default.xml']:
-#  ensure => absent,
-#  before => Service['libvirt'],
-#}
-# in case libvirt has been already running before the Puppet run, make
-# sure the default network is destroyed
-#exec { 'libvirt-default-net-destroy':
-#  command => '/usr/bin/virsh net-destroy default',
-#  onlyif  => '/usr/bin/virsh net-info default | /bin/grep -i "^active:\s*yes"',
-#  before  => Service['libvirt'],
-#}
-
-$pcmk_remote_authkey = hiera('pacemaker_remote_pwd')
-if $pcmk_remote_authkey {
-  file { 'etc-pacemaker':
-    ensure => directory,
-    path    => '/etc/pacemaker',
-    owner   => 'hacluster',
-    group   => 'haclient',
-    mode    => '0750',
-  } ->
-  file { 'etc-pacemaker-authkey':
-    path    => '/etc/pacemaker/authkey',
-    owner   => 'hacluster',
-    group   => 'haclient',
-    mode    => '0640',
-    content => $pcmk_remote_authkey,
-  }  
-  service { 'pacemaker_remote':
-    ensure     => 'running',
-    enable     => true,
+$instance_ha = hiera('instance_ha')
+if $instance_ha {
+  $pcmk_remote_authkey = hiera('pacemaker_remote_pwd')
+  if $pcmk_remote_authkey {
+    file { 'etc-pacemaker':
+      ensure => directory,
+      path    => '/etc/pacemaker',
+      owner   => 'hacluster',
+      group   => 'haclient',
+      mode    => '0750',
+    } ->
+    file { 'etc-pacemaker-authkey':
+      path    => '/etc/pacemaker/authkey',
+      owner   => 'hacluster',
+      group   => 'haclient',
+      mode    => '0640',
+      content => $pcmk_remote_authkey,
+    }  
+    service { 'pacemaker_remote':
+      ensure     => 'running',
+      enable     => true,
+    }
   }
 }
-include ::nova
-include ::nova::config
-# Disable nova compute systemd service as it will be managed by
-#include ::nova::compute
-# pacemaker remoted
-class { '::nova::compute':
-  enabled => false,
-  manage_service => false,
+else {
+  file { ['/etc/libvirt/qemu/networks/autostart/default.xml',
+          '/etc/libvirt/qemu/networks/default.xml']:
+    ensure => absent,
+    before => Service['libvirt'],
+  }
+  # in case libvirt has been already running before the Puppet run, make
+  # sure the default network is destroyed
+  exec { 'libvirt-default-net-destroy':
+    command => '/usr/bin/virsh net-destroy default',
+    onlyif  => '/usr/bin/virsh net-info default | /bin/grep -i "^active:\s*yes"',
+    before  => Service['libvirt'],
+  }
 }
 
+include ::nova
+include ::nova::config
+if $instance_ha {
+  class { '::nova::compute':
+    enabled => false,
+    manage_service => false,
+  }
+}
+else {
+  include ::nova::compute
+}
 nova_config {
   'DEFAULT/my_ip':                     value => $ipaddress;
   'DEFAULT/linuxnet_interface_driver': value => 'nova.network.linux_net.LinuxOVSInterfaceDriver';
@@ -82,11 +88,16 @@ if $rbd_ephemeral_storage or $rbd_persistent_storage {
 
   $client_keys = hiera('ceph::profile::params::client_keys')
   $client_user = join(['client.', hiera('ceph_client_user_name')])
-  #include ::nova::compute::rbd
-  #class { '::nova::compute::rbd': }
-  #  libvirt_rbd_secret_key => $client_keys[$client_user]['secret'],
-  #  require                => Service['pacemaker_remote'],
-  #}
+  
+  if $instance_ha {
+     notify {"FIXME: rbd and pacemaker-remote are not working yet":}
+  }
+  else {
+    include ::nova::compute::rbd
+    class { '::nova::compute::rbd': 
+      libvirt_rbd_secret_key => $client_keys[$client_user]['secret'],
+    }
+  }
 }
 
 if hiera('cinder_enable_nfs_backend', false) {
@@ -102,10 +113,14 @@ if hiera('cinder_enable_nfs_backend', false) {
 
 
 # When doing instance HA libvirt will be managed via pacemaker-remoted
-#include ::nova::compute::libvirt
-service { 'libvirtd':
-  ensure     => 'stopped',
-  enable     => false,
+if $instance_ha {
+  service { 'libvirtd':
+    ensure     => 'stopped',
+    enable     => false,
+  }
+} 
+else {
+  include ::nova::compute::libvirt
 }
 
 if hiera('neutron::core_plugin') == 'midonet.neutron.plugin_v1.MidonetPluginV2' {
@@ -162,11 +177,16 @@ else {
 include ::ceilometer
 include ::ceilometer::config
 # When doing instance HA ceilometer-agent-compute will be managed via pacemaker-remoted
-# include ::ceilometer::agent::compute
-class { '::ceilometer::agent::compute':
-  enabled => false,
-  manage_service => false,
+if $instance_ha {
+  class { '::ceilometer::agent::compute':
+    enabled => false,
+    manage_service => false,
+  }
 }
+else {
+  include ::ceilometer::agent::compute
+}
+ 
 include ::ceilometer::agent::auth
 
 $snmpd_user = hiera('snmpd_readonly_user_name')
