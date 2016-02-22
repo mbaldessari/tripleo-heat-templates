@@ -1572,131 +1572,136 @@ if hiera('step') >= 4 {
       }
     }
 
-    # 14.1 neutron agent running on compute
-    pacemaker::resource::service { "${::neutron::params::ovs_agent_service}-compute":
-      service_name => "${::neutron::params::ovs_agent_service}",
-      clone_params => "interleave=true",
-    } -> exec {  "${::neutron::params::ovs_agent_service}-location-compute":  
-      command => "/usr/sbin/pcs constraint location ${::neutron::params::ovs_agent_service}-compute-clone rule resource-discovery=exclusive score=0 osposprole eq compute",
-      unless  => "/usr/sbin/pcs constraint location show | grep ${::neutron::params::ovs_agent_service}-compute-clone > /dev/null 2>&1",
-    }
-    pacemaker::constraint::base { "${::neutron::params::server_service}-then-${::neutron::params::ovs_agent_service}-compute":
-      constraint_type   => 'order',
-      first_resource    => "${::neutron::params::server_service}-clone",
-      second_resource   => "${::neutron::params::ovs_agent_service}-compute-clone",
-      first_action      => 'start',
-      second_action     => 'start',
-      constraint_params => 'require-all=false',
-      require => [Pacemaker::Resource::Service[$::neutron::params::server_service],
-                  Pacemaker::Resource::Service["${::neutron::params::ovs_agent_service}-compute"]],
-    }
+    if $instance_ha {
+      # 14.1 ron agent running on compute
+      pacemaker::resource::service { "${::neutron::params::ovs_agent_service}-compute":
+        service_name => "${::neutron::params::ovs_agent_service}",
+        clone_params => "interleave=true",
+      } 
+      pacemaker::constraint::location_rule { "${::neutron::params::ovs_agent_service}-location-compute":
+        resource           => "${::neutron::params::ovs_agent_service}-compute",
+        expression         => 'osprole eq compute',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Service["${::neutron::params::ovs_agent_service}-compute"],
+      }
+      pacemaker::constraint::base { "${::neutron::params::server_service}-then-${::neutron::params::ovs_agent_service}-compute":
+        constraint_type   => 'order',
+        first_resource    => "${::neutron::params::server_service}-clone",
+        second_resource   => "${::neutron::params::ovs_agent_service}-compute-clone",
+        first_action      => 'start',
+        second_action     => 'start',
+        constraint_params => 'require-all=false',
+        require           => [Pacemaker::Resource::Service[$::neutron::params::server_service],
+                              Pacemaker::Resource::Service["${::neutron::params::ovs_agent_service}-compute"]],
+      }
 
-    # 14.2 libvirtd agent running on compute
-    pacemaker::resource::service { "libvirtd-compute":
-      service_name => "libvirtd",
-      clone_params => "interleave=true",
-    } -> exec {  "libvirtd-location-compute":  
-      command => "/usr/sbin/pcs constraint location libvirtd-compute-clone rule resource-discovery=exclusive score=0 osposprole eq compute",
-      unless  => "/usr/sbin/pcs constraint location show | grep libvirtd-compute-clone > /dev/null 2>&1",
-    }
-    pacemaker::constraint::base { "${::neutron::params::ovs_agent_service}-compute-then-libvirtd-compute":
-      constraint_type   => 'order',
-      first_resource    => "${::neutron::params::ovs_agent_service}-compute-clone",
-      second_resource   => 'libvirtd-compute-clone',
-      first_action      => 'start',
-      second_action     => 'start',
-      require => [Pacemaker::Resource::Service["libvirtd-compute"],
-                  Pacemaker::Resource::Service["${::neutron::params::ovs_agent_service}-compute"]],
-    } 
-    pacemaker::constraint::colocation { "${::neutron::params::ovs_agent_service}-compute-with-libvirtd-compute":
-      source  => 'libvirtd-compute-clone',
-      target  => "${::neutron::params::ovs_agent_service}-compute-clone",
-      score   => 'INFINITY',
-      require => [Pacemaker::Resource::Service["libvirtd-compute"],
-                  Pacemaker::Resource::Service["${::neutron::params::ovs_agent_service}-compute"]],
-    } 
+      # 14.2 libvirtd agent running on compute
+      pacemaker::resource::service { "libvirtd-compute":
+        service_name => "libvirtd",
+        clone_params => "interleave=true",
+      } -> exec {  "libvirtd-location-compute":  
+        command => "/usr/sbin/pcs constraint location libvirtd-compute-clone rule resource-discovery=exclusive score=0 osposprole eq compute",
+        unless  => "/usr/sbin/pcs constraint location show | grep libvirtd-compute-clone > /dev/null 2>&1",
+      }
+      pacemaker::constraint::base { "${::neutron::params::ovs_agent_service}-compute-then-libvirtd-compute":
+        constraint_type   => 'order',
+        first_resource    => "${::neutron::params::ovs_agent_service}-compute-clone",
+        second_resource   => 'libvirtd-compute-clone',
+        first_action      => 'start',
+        second_action     => 'start',
+        require           => [Pacemaker::Resource::Service["libvirtd-compute"],
+                              Pacemaker::Resource::Service["${::neutron::params::ovs_agent_service}-compute"]],
+      } 
+      pacemaker::constraint::colocation { "${::neutron::params::ovs_agent_service}-compute-with-libvirtd-compute":
+        source  => 'libvirtd-compute-clone',
+        target  => "${::neutron::params::ovs_agent_service}-compute-clone",
+        score   => 'INFINITY',
+        require => [Pacemaker::Resource::Service["libvirtd-compute"],
+                    Pacemaker::Resource::Service["${::neutron::params::ovs_agent_service}-compute"]],
+      } 
 
-    # 14.3 openstack-ceilometer-compute running on compute
-    pacemaker::resource::service { "openstack-ceilometer-compute":
-      clone_params => "interleave=true",
-    } -> exec {  "openstack-ceilometer-compute-location-compute":  
-      command => "/usr/sbin/pcs constraint location openstack-ceilometer-compute-clone rule resource-discovery=exclusive score=0 osposprole eq compute",
-      unless  => "/usr/sbin/pcs constraint location show | grep openstack-ceilometer-compute-clone > /dev/null 2>&1",
-    }
-    pacemaker::constraint::base { "${::ceilometer::params::agent_notification_service_name}-then-openstack-ceilometer-compute":
-      constraint_type   => 'order',
-      first_resource    => "${::ceilometer::params::agent_notification_service_name}-clone",
-      second_resource   => 'openstack-ceilometer-compute-clone',
-      first_action      => 'start',
-      second_action     => 'start',
-      constraint_params => 'require-all=false',
-      require => [Pacemaker::Resource::Service["openstack-ceilometer-compute"],
-                  Pacemaker::Resource::Service[$::ceilometer::params::agent_notification_service_name]],
-    }
-    pacemaker::constraint::base { "libvirtd-compute-clone-then-openstack-ceilometer-compute":
-      constraint_type   => 'order',
-      first_resource    => "libvirtd-compute-clone",
-      second_resource   => 'openstack-ceilometer-compute-clone',
-      first_action      => 'start',
-      second_action     => 'start',
-      require => [Pacemaker::Resource::Service["openstack-ceilometer-compute"],
-                  Pacemaker::Resource::Service["libvirtd-compute"]],
-    }
-    pacemaker::constraint::colocation { "openstack-ceilometer-compute-with-libvirtd-compute":
-      source  => 'openstack-ceilometer-compute-clone',
-      target  => "libvirtd-compute-clone",
-      score   => 'INFINITY',
-      require => [Pacemaker::Resource::Service["openstack-ceilometer-compute"],
-                  Pacemaker::Resource::Service["libvirtd-compute"]],
-    } 
+      # 14.3 openstack-ceilometer-compute running on compute
+      pacemaker::resource::service { "openstack-ceilometer-compute":
+        clone_params => "interleave=true",
+      } -> exec {  "openstack-ceilometer-compute-location-compute":  
+        command => "/usr/sbin/pcs constraint location openstack-ceilometer-compute-clone rule resource-discovery=exclusive score=0 osposprole eq compute",
+        unless  => "/usr/sbin/pcs constraint location show | grep openstack-ceilometer-compute-clone > /dev/null 2>&1",
+      }
+      pacemaker::constraint::base { "${::ceilometer::params::agent_notification_service_name}-then-openstack-ceilometer-compute":
+        constraint_type   => 'order',
+        first_resource    => "${::ceilometer::params::agent_notification_service_name}-clone",
+        second_resource   => 'openstack-ceilometer-compute-clone',
+        first_action      => 'start',
+        second_action     => 'start',
+        constraint_params => 'require-all=false',
+        require           => [Pacemaker::Resource::Service["openstack-ceilometer-compute"],
+                              Pacemaker::Resource::Service[$::ceilometer::params::agent_notification_service_name]],
+      }
+      pacemaker::constraint::base { "libvirtd-compute-clone-then-openstack-ceilometer-compute":
+        constraint_type   => 'order',
+        first_resource    => "libvirtd-compute-clone",
+        second_resource   => 'openstack-ceilometer-compute-clone',
+        first_action      => 'start',
+        second_action     => 'start',
+        require           => [Pacemaker::Resource::Service["openstack-ceilometer-compute"],
+                              Pacemaker::Resource::Service["libvirtd-compute"]],
+      }
+      pacemaker::constraint::colocation { "openstack-ceilometer-compute-with-libvirtd-compute":
+        source  => 'openstack-ceilometer-compute-clone',
+        target  => "libvirtd-compute-clone",
+        score   => 'INFINITY',
+        require => [Pacemaker::Resource::Service["openstack-ceilometer-compute"],
+                    Pacemaker::Resource::Service["libvirtd-compute"]],
+      } 
 
-    # 14.4 nova-compute
-    pacemaker::resource::ocf { 'nova-compute' :
-      ocf_agent_name  => 'openstack:NovaCompute',
-      clone_params    => 'interleave=true',
-      resource_params => "auth_url=${pacemaker_admin_uri} username=admin password=${admin_password} tenant_name=admin domain=localdomain op start timeout=300",
-      require => Pacemaker::Resource::Service["libvirtd-compute"],
-    } -> exec {  "nova-compute-location":  
-      command => "/usr/sbin/pcs constraint location nova-compute-clone rule resource-discovery=exclusive score=0 osposprole eq compute",
-      unless  => "/usr/sbin/pcs constraint location show | grep nova-compute-clone > /dev/null 2>&1",
-    }
-    pacemaker::constraint::base { "${::nova::params::conductor_service_name}-then-nova-compute":
-      constraint_type   => 'order',
-      first_resource    => "${::nova::params::conductor_service_name}-clone",
-      second_resource   => 'nova-compute-clone',
-      first_action      => 'start',
-      second_action     => 'start',
-      constraint_params => 'require-all=false',
-      require => [Pacemaker::Resource::Ocf['nova-evacuate'],
-                  Pacemaker::Resource::Service[$::nova::params::conductor_service_name]],
-    }
-    pacemaker::constraint::base { "nova-compute-clone-then-nova-evacuate":
-      constraint_type   => 'order',
-      first_resource    => "nova-compute-clone",
-      second_resource   => 'nova-evacuate',
-      first_action      => 'start',
-      second_action     => 'start',
-      constraint_params => 'require-all=false',
-      require => [Pacemaker::Resource::Ocf["nova-compute"],
-                  Pacemaker::Resource::Ocf["nova-evacuate"]],
-    }
-    pacemaker::constraint::base { "libvirtd-compute-clone-then-nova-compute":
-      constraint_type   => 'order',
-      first_resource    => "libvirtd-compute-clone",
-      second_resource   => 'nova-compute-clone',
-      first_action      => 'start',
-      second_action     => 'start',
-      require => [Pacemaker::Resource::Ocf["nova-compute"],
-                  Pacemaker::Resource::Service["libvirtd-compute"]],
-    }
-    pacemaker::constraint::colocation { "nova-compute-with-libvirtd-compute":
-      source  => 'nova-compute-clone',
-      target  => "libvirtd-compute-clone",
-      score   => 'INFINITY',
-      require => [Pacemaker::Resource::Ocf["nova-compute"],
-                  Pacemaker::Resource::Service["libvirtd-compute"]],
-    } 
-
+      # 14.4 nova-compute
+      pacemaker::resource::ocf { 'nova-compute' :
+        ocf_agent_name  => 'openstack:NovaCompute',
+        clone_params    => 'interleave=true',
+        resource_params => "auth_url=${pacemaker_admin_uri} username=admin password=${admin_password} tenant_name=admin domain=localdomain op start timeout=300",
+        require => Pacemaker::Resource::Service["libvirtd-compute"],
+      } -> exec {  "nova-compute-location":  
+        command => "/usr/sbin/pcs constraint location nova-compute-clone rule resource-discovery=exclusive score=0 osposprole eq compute",
+        unless  => "/usr/sbin/pcs constraint location show | grep nova-compute-clone > /dev/null 2>&1",
+      }
+      pacemaker::constraint::base { "${::nova::params::conductor_service_name}-then-nova-compute":
+        constraint_type   => 'order',
+        first_resource    => "${::nova::params::conductor_service_name}-clone",
+        second_resource   => 'nova-compute-clone',
+        first_action      => 'start',
+        second_action     => 'start',
+        constraint_params => 'require-all=false',
+        require           => [Pacemaker::Resource::Ocf['nova-evacuate'],
+                              Pacemaker::Resource::Service[$::nova::params::conductor_service_name]],
+      }
+      pacemaker::constraint::base { "nova-compute-clone-then-nova-evacuate":
+        constraint_type   => 'order',
+        first_resource    => "nova-compute-clone",
+        second_resource   => 'nova-evacuate',
+        first_action      => 'start',
+        second_action     => 'start',
+        constraint_params => 'require-all=false',
+        require           => [Pacemaker::Resource::Ocf["nova-compute"],
+                              Pacemaker::Resource::Ocf["nova-evacuate"]],
+      }
+      pacemaker::constraint::base { "libvirtd-compute-clone-then-nova-compute":
+        constraint_type   => 'order',
+        first_resource    => "libvirtd-compute-clone",
+        second_resource   => 'nova-compute-clone',
+        first_action      => 'start',
+        second_action     => 'start',
+        require           => [Pacemaker::Resource::Ocf["nova-compute"],
+                              Pacemaker::Resource::Service["libvirtd-compute"]],
+      }
+      pacemaker::constraint::colocation { "nova-compute-with-libvirtd-compute":
+        source  => 'nova-compute-clone',
+        target  => "libvirtd-compute-clone",
+        score   => 'INFINITY',
+        require => [Pacemaker::Resource::Ocf["nova-compute"],
+                    Pacemaker::Resource::Service["libvirtd-compute"]],
+      } 
+    } # instance-ha
 
     pacemaker::constraint::base { 'keystone-to-neutron-server-constraint':
       constraint_type => 'order',

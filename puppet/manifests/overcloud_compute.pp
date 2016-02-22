@@ -93,7 +93,6 @@ if $rbd_ephemeral_storage or $rbd_persistent_storage {
      notify {"FIXME: rbd and pacemaker-remote are not working yet":}
   }
   else {
-    include ::nova::compute::rbd
     class { '::nova::compute::rbd': 
       libvirt_rbd_secret_key => $client_keys[$client_user]['secret'],
     }
