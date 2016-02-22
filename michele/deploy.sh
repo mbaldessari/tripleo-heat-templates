@@ -11,7 +11,7 @@ openstack overcloud deploy --log-file mydeploy.log --templates --libvirt-type=qe
   -e /home/stack/openstack-tripleo-heat-templates/environments/net-single-nic-with-vlans.yaml \
   -e /home/stack/network-environment.yaml \
   -e /home/stack/openstack-tripleo-heat-templates/environments/storage-environment.yaml \
-  -e /home/stack/userdata_env.yaml \
-  -e /home/stack/fencing.yaml \
-  -e /home/stack/instance-ha.yaml \
+  -e /home/stack/openstack-tripleo-heat-templates/michele/userdata_env.yaml \
+  -e /home/stack/openstack-tripleo-heat-templates/michele/fencing.yaml \
+  -e /home/stack/openstack-tripleo-heat-templates/michele/instance-ha.yaml \
   -e /home/stack/openstack-tripleo-heat-templates/environments/puppet-pacemaker.yaml
