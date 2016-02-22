@@ -1,0 +1,55 @@
+parameters:
+    EnableFencing: true
+    FencingConfig:
+        {
+            "devices": [
+                {
+                    "agent": "fence_xvm", 
+                    "host_mac": "00:da:01:d3:a1:da", 
+                    "params": {
+                        "multicast_address": "225.0.0.12", 
+                        "port": "baremetalbrbm_0"
+                    }
+                }, 
+                {
+                    "agent": "fence_xvm", 
+                    "host_mac": "00:6d:15:01:d5:f4", 
+                    "params": {
+                        "multicast_address": "225.0.0.12", 
+                        "port": "baremetalbrbm_4"
+                    }
+                }, 
+                {
+                    "agent": "fence_xvm", 
+                    "host_mac": "00:71:b2:33:8d:30", 
+                    "params": {
+                        "multicast_address": "225.0.0.12", 
+                        "port": "baremetalbrbm_1"
+                    }
+                }, 
+                {
+                    "agent": "fence_xvm", 
+                    "host_mac": "00:f3:18:a2:61:5b", 
+                    "params": {
+                        "multicast_address": "225.0.0.12", 
+                        "port": "baremetalbrbm_2"
+                    }
+                }, 
+                {
+                    "agent": "fence_xvm", 
+                    "host_mac": "00:64:9a:d5:9d:2d", 
+                    "params": {
+                        "multicast_address": "225.0.0.12", 
+                        "port": "baremetalbrbm_5"
+                    }
+                }, 
+                {
+                    "agent": "fence_xvm", 
+                    "host_mac": "00:1b:e7:ed:0e:19", 
+                    "params": {
+                        "multicast_address": "225.0.0.12", 
+                        "port": "baremetalbrbm_3"
+                    }
+                }
+            ]
+        }

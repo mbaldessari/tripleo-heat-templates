@@ -1,0 +1,2 @@
+resource_registry:
+    OS::TripleO::AllNodesExtraConfig: /home/stack/openstack-tripleo-heat-templates/extraconfig/all_nodes/mac_hostname.yaml
