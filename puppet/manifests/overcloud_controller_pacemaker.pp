@@ -1579,7 +1579,7 @@ if hiera('step') >= 4 {
         clone_params => "interleave=true",
       } 
       pacemaker::constraint::location_rule { "${::neutron::params::ovs_agent_service}-location-compute":
-        resource           => "${::neutron::params::ovs_agent_service}-compute",
+        resource           => "${::neutron::params::ovs_agent_service}-compute-clone",
         expression         => 'osprole eq compute',
         resource_discovery => 'exclusive',
         score              => 0,
