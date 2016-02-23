@@ -1665,13 +1665,13 @@ if hiera('step') >= 4 {
 
       # 14.4 nova-compute
       pacemaker::resource::ocf { 'nova-compute' :
-        ocf_agent_name  => 'openstack:NovaCompute',
+        ocf_agent_name  => 'openstack:nova-compute-wait',
         clone_params    => 'interleave=true',
         resource_params => "auth_url=${pacemaker_admin_uri} username=admin password=${admin_password} tenant_name=admin domain=localdomain op start timeout=300",
         require => Pacemaker::Resource::Service["libvirtd-compute"],
       }
 
-      pacemaker::contraint::location_rule { 'nova-compute-location':
+      pacemaker::constraint::location_rule { 'nova-compute-location':
         resource           => 'nova-compute-clone',
         expression         => 'osprole eq compute',
         resource_discovery => 'exclusive',
