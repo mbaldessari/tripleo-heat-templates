@@ -64,6 +64,8 @@ if $::hostname == downcase(hiera('bootstrap_nodeid')) {
 }
 
 $instance_ha = hiera('instance_ha')
+$pacemaker_admin_uri = hiera('pacemaker_admin_uri')
+$admin_password = hiera('admin_password')
 
 $enable_fencing = str2bool(hiera('enable_fencing', false)) and hiera('step') >= 5
 $enable_load_balancer = hiera('enable_load_balancer', true)
@@ -2257,8 +2259,6 @@ if hiera('step') >= 4 {
     # Add NovaEvacuate active/passive resource (step 7 of the article)
     # FIXME: without shared_storage=1 ?!? see newest env requirement
     if $instance_ha {
-      $pacemaker_admin_uri = hiera('pacemaker_admin_uri')
-      $admin_password = hiera('admin_password')
       pacemaker::resource::ocf { 'nova-evacuate':
         ocf_agent_name  => 'openstack:NovaEvacuate',
         resource_params => "auth_url=${pacemaker_admin_uri} username=admin password=${admin_password} tenant_name=admin no_shared_storage=1",
