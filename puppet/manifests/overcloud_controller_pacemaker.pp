@@ -1600,9 +1600,13 @@ if hiera('step') >= 4 {
       pacemaker::resource::service { "libvirtd-compute":
         service_name => "libvirtd",
         clone_params => "interleave=true",
-      } -> exec {  "libvirtd-location-compute":  
-        command => "/usr/sbin/pcs constraint location libvirtd-compute-clone rule resource-discovery=exclusive score=0 osposprole eq compute",
-        unless  => "/usr/sbin/pcs constraint location show | grep libvirtd-compute-clone > /dev/null 2>&1",
+      }
+      pacemaker::constraint::location_rule { 'libvirtd-location-compute':
+        resource           => 'libvirtd-compute-clone',
+        expression         => 'osprole eq compute',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Service['libvirtd-compute'],
       }
       pacemaker::constraint::base { "${::neutron::params::ovs_agent_service}-compute-then-libvirtd-compute":
         constraint_type   => 'order',
@@ -1624,9 +1628,13 @@ if hiera('step') >= 4 {
       # 14.3 openstack-ceilometer-compute running on compute
       pacemaker::resource::service { "openstack-ceilometer-compute":
         clone_params => "interleave=true",
-      } -> exec {  "openstack-ceilometer-compute-location-compute":  
-        command => "/usr/sbin/pcs constraint location openstack-ceilometer-compute-clone rule resource-discovery=exclusive score=0 osposprole eq compute",
-        unless  => "/usr/sbin/pcs constraint location show | grep openstack-ceilometer-compute-clone > /dev/null 2>&1",
+      }
+      pacemaker::constraint::location_rule { 'openstack-ceilometer-compute-location-compute':
+        resource           => 'openstack-ceilometer-compute-clone',
+        expression         => 'osprole eq compute',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Service['openstack-ceilometer-compute'],
       }
       pacemaker::constraint::base { "${::ceilometer::params::agent_notification_service_name}-then-openstack-ceilometer-compute":
         constraint_type   => 'order',
@@ -1661,9 +1669,14 @@ if hiera('step') >= 4 {
         clone_params    => 'interleave=true',
         resource_params => "auth_url=${pacemaker_admin_uri} username=admin password=${admin_password} tenant_name=admin domain=localdomain op start timeout=300",
         require => Pacemaker::Resource::Service["libvirtd-compute"],
-      } -> exec {  "nova-compute-location":  
-        command => "/usr/sbin/pcs constraint location nova-compute-clone rule resource-discovery=exclusive score=0 osposprole eq compute",
-        unless  => "/usr/sbin/pcs constraint location show | grep nova-compute-clone > /dev/null 2>&1",
+      }
+
+      pacemaker::contraint::location_rule { 'nova-compute-location':
+        resource           => 'nova-compute-clone',
+        expression         => 'osprole eq compute',
+        resource_discovery => 'exclusive',
+        score              => 0,
+        require            => Pacemaker::Resource::Ocf['nova-compute'],
       }
       pacemaker::constraint::base { "${::nova::params::conductor_service_name}-then-nova-compute":
         constraint_type   => 'order',
