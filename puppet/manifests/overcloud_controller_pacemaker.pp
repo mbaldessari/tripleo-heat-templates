@@ -1525,11 +1525,6 @@ if hiera('step') >= 4 {
     pacemaker::resource::service { $::ceilometer::params::agent_notification_service_name :
       clone_params => 'interleave=true',
     }
-    pacemaker::resource::ocf { 'delay' :
-      ocf_agent_name  => 'heartbeat:Delay',
-      clone_params    => 'interleave=true',
-      resource_params => 'startdelay=10',
-    }
     # Fedora doesn't know `require-all` parameter for constraints yet
     if $::operatingsystem == 'Fedora' {
       $redis_ceilometer_constraint_params = undef
@@ -1579,22 +1574,6 @@ if hiera('step') >= 4 {
       score   => 'INFINITY',
       require => [Pacemaker::Resource::Service[$::ceilometer::params::api_service_name],
                   Pacemaker::Resource::Service[$::ceilometer::params::collector_service_name]],
-    }
-    pacemaker::constraint::base { 'ceilometer-api-then-ceilometer-delay-constraint':
-      constraint_type => 'order',
-      first_resource  => "${::ceilometer::params::api_service_name}-clone",
-      second_resource => 'delay-clone',
-      first_action    => 'start',
-      second_action   => 'start',
-      require         => [Pacemaker::Resource::Service[$::ceilometer::params::api_service_name],
-                          Pacemaker::Resource::Ocf['delay']],
-    }
-    pacemaker::constraint::colocation { 'ceilometer-delay-with-ceilometer-api-colocation':
-      source  => 'delay-clone',
-      target  => "${::ceilometer::params::api_service_name}-clone",
-      score   => 'INFINITY',
-      require => [Pacemaker::Resource::Service[$::ceilometer::params::api_service_name],
-                  Pacemaker::Resource::Ocf['delay']],
     }
     if downcase(hiera('ceilometer_backend')) == 'mongodb' {
       pacemaker::constraint::base { 'mongodb-then-ceilometer-central-constraint':
