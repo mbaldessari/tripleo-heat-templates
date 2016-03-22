@@ -57,7 +57,7 @@ if hiera('step') >= 1 {
       controller_hosts_names => $controller_node_names,
       manage_vip             => false,
       mysql_clustercheck     => true,
-      haproxy_service_manage => false,
+      haproxy_service_manage => true,
     }
   }
 
@@ -129,13 +129,13 @@ if hiera('step') >= 1 {
     include ::mongodb::globals
     include ::mongodb::client
     class { '::mongodb::server' :
-      service_manage => false,
+      service_manage => true,
     }
   }
 
   # Memcached
   class {'::memcached' :
-    service_manage => false,
+    service_manage => true,
   }
 
   # Redis
@@ -223,11 +223,6 @@ if hiera('step') >= 2 {
 
       include ::pacemaker::resource_defaults
 
-      # Create an openstack-core dummy resource. See RHBZ 1290121
-      pacemaker::resource::ocf { 'openstack-core':
-        ocf_agent_name => 'heartbeat:Dummy',
-        clone_params   => true,
-      }
       # FIXME: we should not have to access tripleo::loadbalancer class
       # parameters here to configure pacemaker VIPs. The configuration
       # of pacemaker VIPs could move into puppet-tripleo or we should
