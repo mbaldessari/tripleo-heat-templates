@@ -1107,8 +1107,8 @@ if hiera('step') >= 3 {
   # httpd/apache and horizon
   # NOTE(gfidente): server-status can be consumed by the pacemaker resource agent
   class { '::apache' :
-    service_enable => $non_pcmk_start,
-    service_manage => $non_pcmk_start, # <-- not supported with horizon&apache mod_wsgi?
+    service_enable => true,
+    service_manage => true, # <-- not supported with horizon&apache mod_wsgi?
   }
   include ::keystone::wsgi::apache
   include ::apache::mod::status
@@ -1166,7 +1166,7 @@ if hiera('step') >= 5 {
 
   if $pacemaker_master {
     include ::keystone::roles::admin
-    include ::keystone::endpoind
+    include ::keystone::endpoint
     include ::heat::keystone::domain
     Class['::keystone::roles::admin'] -> Class['::heat::keystone::domain']
 
