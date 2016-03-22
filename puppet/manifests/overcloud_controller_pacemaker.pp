@@ -586,8 +586,8 @@ if hiera('step') >= 3 {
 
   class { '::keystone':
     sync_db          => $sync_db,
-    manage_service   => true,
-    enabled          => true,
+    manage_service   => $non_pcmk_start,
+    enabled          => $non_pcmk_start,
     # FIXME(michele): Need to check this enable_bootstrap more in detail
     enable_bootstrap => $pacemaker_master,
   }
@@ -649,13 +649,13 @@ if hiera('step') >= 3 {
   include ::glance::config
   class { '::glance::api':
     known_stores   => $glance_store,
-    manage_service => true,
-    enabled        => true,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
   class { '::glance::registry' :
     sync_db        => $sync_db,
-    manage_service => true,
-    enabled        => true,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
   include ::glance::notify::rabbitmq
   include join(['::glance::backend::', $glance_backend])
@@ -676,29 +676,29 @@ if hiera('step') >= 3 {
   class { '::nova::api' :
     sync_db        => $sync_db,
     sync_db_api    => $sync_db,
-    manage_service => true,
-    enabled        => true,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
   class { '::nova::cert' :
-    manage_service => true,
-    enabled        => true,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
   class { '::nova::conductor' :
-    manage_service => true,
-    enabled        => true,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
   class { '::nova::consoleauth' :
-    manage_service => true,
-    enabled        => true,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
   class { '::nova::vncproxy' :
-    manage_service => true,
-    enabled        => true,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
   include ::nova::scheduler::filter
   class { '::nova::scheduler' :
-    manage_service => true,
-    enabled        => true,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
   include ::nova::network::neutron
 
@@ -756,8 +756,8 @@ if hiera('step') >= 3 {
   include ::neutron::config
   class { '::neutron::server' :
     sync_db        => $sync_db,
-    manage_service => true,
-    enabled        => true,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
   include ::neutron::server::notifications
   if  hiera('neutron::core_plugin') == 'neutron.plugins.nuage.plugin.NuagePlugin' {
@@ -775,8 +775,8 @@ if hiera('step') >= 3 {
   }
   if hiera('neutron::enable_dhcp_agent',true) {
     class { '::neutron::agents::dhcp' :
-      manage_service => true,
-      enabled        => true,
+      manage_service => $non_pcmk_start,
+      enabled        => $non_pcmk_start,
     }
     file { '/etc/neutron/dnsmasq-neutron.conf':
       content => hiera('neutron_dnsmasq_options'),
@@ -788,20 +788,20 @@ if hiera('step') >= 3 {
   }
   if hiera('neutron::enable_l3_agent',true) {
     class { '::neutron::agents::l3' :
-      manage_service => true,
-      enabled        => true,
+      manage_service => $non_pcmk_start,
+      enabled        => $non_pcmk_start,
     }
   }
   if hiera('neutron::enable_metadata_agent',true) {
     class { '::neutron::agents::metadata':
-      manage_service => true,
-      enabled        => true,
+      manage_service => $non_pcmk_start,
+      enabled        => $non_pcmk_start,
     }
   }
   include ::neutron::plugins::ml2
   class { '::neutron::agents::ml2::ovs':
-    manage_service => true,
-    enabled        => true,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
 
   if 'cisco_ucsm' in hiera('neutron::plugins::ml2::mechanism_drivers') {
@@ -844,12 +844,12 @@ if hiera('step') >= 3 {
   include ::tripleo::ssl::cinder_config
   class { '::cinder::api':
     sync_db        => $sync_db,
-    manage_service => true,
-    enabled        => true,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
   class { '::cinder::scheduler' :
-    manage_service => true,
-    enabled        => true,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
   class { '::cinder::volume' :
     manage_service => false,
@@ -1057,20 +1057,20 @@ if hiera('step') >= 3 {
   include ::ceilometer
   include ::ceilometer::config
   class { '::ceilometer::api' :
-    manage_service => true,
-    enabled        => true,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
   class { '::ceilometer::agent::notification' :
-    manage_service => true,
-    enabled        => true,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
   class { '::ceilometer::agent::central' :
-    manage_service => true,
-    enabled        => true,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
   class { '::ceilometer::collector' :
-    manage_service => true,
-    enabled        => true,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
   include ::ceilometer::expirer
   class { '::ceilometer::db' :
@@ -1088,27 +1088,27 @@ if hiera('step') >= 3 {
     notification_driver => 'messaging',
   }
   class { '::heat::api' :
-    manage_service => true,
-    enabled        => true,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
   class { '::heat::api_cfn' :
-    manage_service => true,
-    enabled        => true,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
   class { '::heat::api_cloudwatch' :
-    manage_service => true,
-    enabled        => true,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
   class { '::heat::engine' :
-    manage_service => true,
-    enabled        => true,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
 
   # httpd/apache and horizon
   # NOTE(gfidente): server-status can be consumed by the pacemaker resource agent
   class { '::apache' :
-    service_enable => true,
-    service_manage => true, # <-- not supported with horizon&apache mod_wsgi?
+    service_enable => $non_pcmk_start,
+    service_manage => $non_pcmk_start, # <-- not supported with horizon&apache mod_wsgi?
   }
   include ::keystone::wsgi::apache
   include ::apache::mod::status
