@@ -985,6 +985,7 @@ if hiera('step') >= 3 {
     enabled_backends => union($cinder_enabled_backends, hiera('cinder_user_enabled_backends')),
   }
 
+  # FIXME(michele): sahara is left out for now. Will look at enabling it later (probably dependent to a parameter)
   class { '::sahara':
     sync_db => $sync_db,
   }
@@ -1056,20 +1057,20 @@ if hiera('step') >= 3 {
   include ::ceilometer
   include ::ceilometer::config
   class { '::ceilometer::api' :
-    manage_service => false,
-    enabled        => false,
+    manage_service => true,
+    enabled        => true,
   }
   class { '::ceilometer::agent::notification' :
-    manage_service => false,
-    enabled        => false,
+    manage_service => true,
+    enabled        => true,
   }
   class { '::ceilometer::agent::central' :
-    manage_service => false,
-    enabled        => false,
+    manage_service => true,
+    enabled        => true,
   }
   class { '::ceilometer::collector' :
-    manage_service => false,
-    enabled        => false,
+    manage_service => true,
+    enabled        => true,
   }
   include ::ceilometer::expirer
   class { '::ceilometer::db' :
