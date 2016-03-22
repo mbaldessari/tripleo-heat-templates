@@ -1088,27 +1088,27 @@ if hiera('step') >= 3 {
     notification_driver => 'messaging',
   }
   class { '::heat::api' :
-    manage_service => false,
-    enabled        => false,
+    manage_service => true,
+    enabled        => true,
   }
   class { '::heat::api_cfn' :
-    manage_service => false,
-    enabled        => false,
+    manage_service => true,
+    enabled        => true,
   }
   class { '::heat::api_cloudwatch' :
-    manage_service => false,
-    enabled        => false,
+    manage_service => true,
+    enabled        => true,
   }
   class { '::heat::engine' :
-    manage_service => false,
-    enabled        => false,
+    manage_service => true,
+    enabled        => true,
   }
 
   # httpd/apache and horizon
   # NOTE(gfidente): server-status can be consumed by the pacemaker resource agent
   class { '::apache' :
-    service_enable => false,
-    # service_manage => false, # <-- not supported with horizon&apache mod_wsgi?
+    service_enable => true,
+    service_manage => true, # <-- not supported with horizon&apache mod_wsgi?
   }
   include ::keystone::wsgi::apache
   include ::apache::mod::status
