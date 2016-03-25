@@ -848,7 +848,6 @@ if hiera('step') >= 3 {
     'DEFAULT/notification_driver': value => 'messaging';
   }
 
-  include ::cinder
   # FIXME(michele): find a cleaner/more uniform way to set these parameters
   class { '::cinder':
     # This maps to [database]/max_retries and represents the retries on startup
