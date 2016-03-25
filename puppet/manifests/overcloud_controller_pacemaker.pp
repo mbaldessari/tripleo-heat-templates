@@ -840,7 +840,17 @@ if hiera('step') >= 3 {
   }
 
   include ::cinder
+  # FIXME(michele): find a cleaner way to set these parameters
+  class { '::cinder':
+    # This maps to [database]/max_retries and represents the retries on startup
+    database_max_retries => -1,
+  }
   include ::cinder::config
+  cinder_config {
+    # Maximum retries in case of connection error or deadlock error before error is
+    # raised. Set to -1 to specify an infinite retry count.
+    'database/db_max_retries': value => -1;
+  }
   include ::tripleo::ssl::cinder_config
   class { '::cinder::api':
     sync_db        => $sync_db,
