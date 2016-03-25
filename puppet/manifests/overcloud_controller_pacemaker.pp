@@ -590,9 +590,12 @@ if hiera('step') >= 3 {
     enabled          => $non_pcmk_start,
     # FIXME(michele): Need to check this enable_bootstrap more in detail
     enable_bootstrap => $pacemaker_master,
+    database_max_retries => -1,
   }
   include ::keystone::config
-
+  keystone_config {
+    'database/db_max_retries': value => -1;
+  }
   #TODO: need a cleanup-keystone-tokens.sh solution here
 
   file { [ '/etc/keystone/ssl', '/etc/keystone/ssl/certs', '/etc/keystone/ssl/private' ]:
@@ -651,12 +654,15 @@ if hiera('step') >= 3 {
     known_stores   => $glance_store,
     manage_service => $non_pcmk_start,
     enabled        => $non_pcmk_start,
+    database_max_retries => -1,
   }
   class { '::glance::registry' :
     sync_db        => $sync_db,
     manage_service => $non_pcmk_start,
     enabled        => $non_pcmk_start,
+    database_max_retries => -1,
   }
+  
   include ::glance::notify::rabbitmq
   include join(['::glance::backend::', $glance_backend])
 
@@ -669,10 +675,13 @@ if hiera('step') >= 3 {
 
   class { '::nova' :
     memcached_servers => $memcached_servers
+    database_max_retries => -1,
   }
 
   include ::nova::config
-
+  nova_config {
+    'database/db_max_retries': value => -1;
+  }
   class { '::nova::api' :
     sync_db        => $sync_db,
     sync_db_api    => $sync_db,
@@ -840,7 +849,7 @@ if hiera('step') >= 3 {
   }
 
   include ::cinder
-  # FIXME(michele): find a cleaner way to set these parameters
+  # FIXME(michele): find a cleaner/more uniform way to set these parameters
   class { '::cinder':
     # This maps to [database]/max_retries and represents the retries on startup
     database_max_retries => -1,
@@ -1094,8 +1103,12 @@ if hiera('step') >= 3 {
   # Heat
   include ::heat::config
   class { '::heat' :
-    sync_db             => $sync_db,
-    notification_driver => 'messaging',
+    sync_db              => $sync_db,
+    notification_driver  => 'messaging',
+    database_max_retries => -1,
+  }
+  heat_config {
+    'database/db_max_retries': value => -1;
   }
   class { '::heat::api' :
     manage_service => $non_pcmk_start,
