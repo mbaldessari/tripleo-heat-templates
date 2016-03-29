@@ -411,11 +411,6 @@ if hiera('step') >= 2 {
 
     }
 
-    pacemaker::resource::service { $::memcached::params::service_name :
-      clone_params => 'interleave=true',
-      require      => Class['::memcached'],
-    }
-
     pacemaker::resource::ocf { 'rabbitmq':
       ocf_agent_name  => 'heartbeat:rabbitmq-cluster',
       resource_params => 'set_policy=\'ha-all ^(?!amq\.).* {"ha-mode":"all"}\'',
