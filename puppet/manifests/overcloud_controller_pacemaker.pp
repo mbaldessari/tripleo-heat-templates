@@ -408,7 +408,6 @@ if hiera('step') >= 2 {
                       Pacemaker::Resource::Ip['storage_mgmt_vip']],
         }
       }
-
     }
 
     pacemaker::resource::ocf { 'rabbitmq':
@@ -420,16 +419,11 @@ if hiera('step') >= 2 {
     }
 
     if downcase(hiera('ceilometer_backend')) == 'mongodb' {
-      pacemaker::resource::service { $::mongodb::params::service_name :
-        op_params    => 'start timeout=370s stop timeout=200s',
-        clone_params => true,
-        require      => Class['::mongodb::server'],
-      }
       # NOTE (spredzy) : The replset can only be run
       # once all the nodes have joined the cluster.
       mongodb_conn_validator { $mongo_node_ips_with_port :
         timeout => '600',
-        require => Pacemaker::Resource::Service[$::mongodb::params::service_name],
+        require => Class['::mongodb::server'],
         before  => Mongodb_replset[$mongodb_replset],
       }
       mongodb_replset { $mongodb_replset :
