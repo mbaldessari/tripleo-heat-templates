@@ -297,11 +297,6 @@ if hiera('step') >= 2 {
       }
     }
 
-    pacemaker::resource::service { $::memcached::params::service_name :
-      clone_params => 'interleave=true',
-      require      => Class['::memcached'],
-    }
-
     pacemaker::resource::ocf { 'rabbitmq':
       ocf_agent_name  => 'heartbeat:rabbitmq-cluster',
       resource_params => 'set_policy=\'ha-all ^(?!amq\.).* {"ha-mode":"all"}\'',
@@ -311,16 +306,11 @@ if hiera('step') >= 2 {
     }
 
     if downcase(hiera('ceilometer_backend')) == 'mongodb' {
-      pacemaker::resource::service { $::mongodb::params::service_name :
-        op_params    => 'start timeout=370s stop timeout=200s',
-        clone_params => true,
-        require      => Class['::mongodb::server'],
-      }
       # NOTE (spredzy) : The replset can only be run
       # once all the nodes have joined the cluster.
       mongodb_conn_validator { $mongo_node_ips_with_port :
         timeout => '600',
-        require => Pacemaker::Resource::Service[$::mongodb::params::service_name],
+        require => Class['::mongodb::server'],
         before  => Mongodb_replset[$mongodb_replset],
       }
       mongodb_replset { $mongodb_replset :
@@ -490,13 +480,15 @@ if hiera('step') >= 4 {
   include ::glance::config
   class { '::glance::api':
     known_stores   => $glance_store,
-    manage_service => false,
-    enabled        => false,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
+    database_max_retries => -1,
   }
   class { '::glance::registry' :
     sync_db        => $sync_db,
-    manage_service => false,
-    enabled        => false,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
+    database_max_retries => -1,
   }
   include ::glance::notify::rabbitmq
   include join(['::glance::backend::', $glance_backend])
@@ -510,36 +502,40 @@ if hiera('step') >= 4 {
 
   class { '::nova' :
     memcached_servers => $memcached_servers
+    database_max_retries => -1,
   }
 
   include ::nova::config
+  nova_config {
+    'database/db_max_retries': value => -1;
+  }
 
   class { '::nova::api' :
     sync_db        => $sync_db,
     sync_db_api    => $sync_db,
-    manage_service => false,
-    enabled        => false,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
   class { '::nova::cert' :
-    manage_service => false,
-    enabled        => false,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
   class { '::nova::conductor' :
-    manage_service => false,
-    enabled        => false,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
   class { '::nova::consoleauth' :
-    manage_service => false,
-    enabled        => false,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
   class { '::nova::vncproxy' :
-    manage_service => false,
-    enabled        => false,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
   include ::nova::scheduler::filter
   class { '::nova::scheduler' :
-    manage_service => false,
-    enabled        => false,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
   include ::nova::network::neutron
 
@@ -597,8 +593,8 @@ if hiera('step') >= 4 {
   include ::neutron::config
   class { '::neutron::server' :
     sync_db        => $sync_db,
-    manage_service => false,
-    enabled        => false,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
   include ::neutron::server::notifications
   if  hiera('neutron::core_plugin') == 'neutron.plugins.nuage.plugin.NuagePlugin' {
@@ -624,8 +620,8 @@ if hiera('step') >= 4 {
   }
   if hiera('neutron::enable_dhcp_agent',true) {
     class { '::neutron::agents::dhcp' :
-      manage_service => false,
-      enabled        => false,
+      manage_service => $non_pcmk_start,
+      enabled        => $non_pcmk_start,
     }
     file { '/etc/neutron/dnsmasq-neutron.conf':
       content => hiera('neutron_dnsmasq_options'),
@@ -637,20 +633,20 @@ if hiera('step') >= 4 {
   }
   if hiera('neutron::enable_l3_agent',true) {
     class { '::neutron::agents::l3' :
-      manage_service => false,
-      enabled        => false,
+      manage_service => $non_pcmk_start,
+      enabled        => $non_pcmk_start,
     }
   }
   if hiera('neutron::enable_metadata_agent',true) {
     class { '::neutron::agents::metadata':
-      manage_service => false,
-      enabled        => false,
+      manage_service => $non_pcmk_start,
+      enabled        => $non_pcmk_start,
     }
   }
   include ::neutron::plugins::ml2
   class { '::neutron::agents::ml2::ovs':
-    manage_service => false,
-    enabled        => false,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
 
   if 'cisco_ucsm' in hiera('neutron::plugins::ml2::mechanism_drivers') {
@@ -688,17 +684,27 @@ if hiera('step') >= 4 {
     'DEFAULT/notification_driver': value => 'messaging';
   }
 
-  include ::cinder
+  class { '::cinder':
+    # This maps to [database]/max_retries and represents the retries on startup
+    database_max_retries => -1,
+  }
+
   include ::cinder::config
+  cinder_config {
+    # Maximum retries in case of connection error or deadlock error before error is
+    # raised. Set to -1 to specify an infinite retry count.
+    'database/db_max_retries': value => -1;
+  }
+
   include ::tripleo::ssl::cinder_config
   class { '::cinder::api':
     sync_db        => $sync_db,
-    manage_service => false,
-    enabled        => false,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
   class { '::cinder::scheduler' :
-    manage_service => false,
-    enabled        => false,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
   class { '::cinder::volume' :
     manage_service => false,
@@ -906,20 +912,20 @@ if hiera('step') >= 4 {
   include ::ceilometer
   include ::ceilometer::config
   class { '::ceilometer::api' :
-    manage_service => false,
-    enabled        => false,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
   class { '::ceilometer::agent::notification' :
-    manage_service => false,
-    enabled        => false,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
   class { '::ceilometer::agent::central' :
-    manage_service => false,
-    enabled        => false,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
   class { '::ceilometer::collector' :
-    manage_service => false,
-    enabled        => false,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
   include ::ceilometer::expirer
   class { '::ceilometer::db' :
@@ -936,29 +942,34 @@ if hiera('step') >= 4 {
   class { '::heat' :
     sync_db             => $sync_db,
     notification_driver => 'messaging',
+    database_max_retries => -1,
   }
+  heat_config {
+    'database/db_max_retries': value => -1;
+  }
+
   class { '::heat::api' :
-    manage_service => false,
-    enabled        => false,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
   class { '::heat::api_cfn' :
-    manage_service => false,
-    enabled        => false,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
   class { '::heat::api_cloudwatch' :
-    manage_service => false,
-    enabled        => false,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
   class { '::heat::engine' :
-    manage_service => false,
-    enabled        => false,
+    manage_service => $non_pcmk_start,
+    enabled        => $non_pcmk_start,
   }
 
   # httpd/apache and horizon
   # NOTE(gfidente): server-status can be consumed by the pacemaker resource agent
   class { '::apache' :
-    service_enable => false,
-    # service_manage => false, # <-- not supported with horizon&apache mod_wsgi?
+    service_enable => true,
+    service_manage => true, # <-- not supported with horizon&apache mod_wsgi?
   }
   include ::apache::mod::status
   if 'cisco_n1kv' in hiera('neutron::plugins::ml2::mechanism_drivers') {
@@ -1071,159 +1082,7 @@ if hiera('step') >= 5 {
 
   if $pacemaker_master {
 
-    pacemaker::constraint::base { 'openstack-core-then-httpd-constraint':
-      constraint_type => 'order',
-      first_resource  => 'openstack-core-clone',
-      second_resource => "${::apache::params::service_name}-clone",
-      first_action    => 'start',
-      second_action   => 'start',
-      require         => [Pacemaker::Resource::Service[$::apache::params::service_name],
-                          Pacemaker::Resource::Ocf['openstack-core']],
-    }
-    pacemaker::constraint::base { 'memcached-then-openstack-core-constraint':
-      constraint_type => 'order',
-      first_resource  => 'memcached-clone',
-      second_resource => 'openstack-core-clone',
-      first_action    => 'start',
-      second_action   => 'start',
-      require         => [Pacemaker::Resource::Service['memcached'],
-                          Pacemaker::Resource::Ocf['openstack-core']],
-    }
-    pacemaker::constraint::base { 'galera-then-openstack-core-constraint':
-      constraint_type => 'order',
-      first_resource  => 'galera-master',
-      second_resource => 'openstack-core-clone',
-      first_action    => 'promote',
-      second_action   => 'start',
-      require         => [Pacemaker::Resource::Ocf['galera'],
-                          Pacemaker::Resource::Ocf['openstack-core']],
-    }
-
-    # Cinder
-    pacemaker::resource::service { $::cinder::params::api_service :
-      clone_params => 'interleave=true',
-      require      => Pacemaker::Resource::Ocf['openstack-core'],
-    }
-    pacemaker::resource::service { $::cinder::params::scheduler_service :
-      clone_params => 'interleave=true',
-    }
     pacemaker::resource::service { $::cinder::params::volume_service : }
-
-    pacemaker::constraint::base { 'keystone-then-cinder-api-constraint':
-      constraint_type => 'order',
-      first_resource  => 'openstack-core-clone',
-      second_resource => "${::cinder::params::api_service}-clone",
-      first_action    => 'start',
-      second_action   => 'start',
-      require         => [Pacemaker::Resource::Ocf['openstack-core'],
-                          Pacemaker::Resource::Service[$::cinder::params::api_service]],
-    }
-    pacemaker::constraint::base { 'cinder-api-then-cinder-scheduler-constraint':
-      constraint_type => 'order',
-      first_resource  => "${::cinder::params::api_service}-clone",
-      second_resource => "${::cinder::params::scheduler_service}-clone",
-      first_action    => 'start',
-      second_action   => 'start',
-      require         => [Pacemaker::Resource::Service[$::cinder::params::api_service],
-                          Pacemaker::Resource::Service[$::cinder::params::scheduler_service]],
-    }
-    pacemaker::constraint::colocation { 'cinder-scheduler-with-cinder-api-colocation':
-      source  => "${::cinder::params::scheduler_service}-clone",
-      target  => "${::cinder::params::api_service}-clone",
-      score   => 'INFINITY',
-      require => [Pacemaker::Resource::Service[$::cinder::params::api_service],
-                  Pacemaker::Resource::Service[$::cinder::params::scheduler_service]],
-    }
-    pacemaker::constraint::base { 'cinder-scheduler-then-cinder-volume-constraint':
-      constraint_type => 'order',
-      first_resource  => "${::cinder::params::scheduler_service}-clone",
-      second_resource => $::cinder::params::volume_service,
-      first_action    => 'start',
-      second_action   => 'start',
-      require         => [Pacemaker::Resource::Service[$::cinder::params::scheduler_service],
-                          Pacemaker::Resource::Service[$::cinder::params::volume_service]],
-    }
-    pacemaker::constraint::colocation { 'cinder-volume-with-cinder-scheduler-colocation':
-      source  => $::cinder::params::volume_service,
-      target  => "${::cinder::params::scheduler_service}-clone",
-      score   => 'INFINITY',
-      require => [Pacemaker::Resource::Service[$::cinder::params::scheduler_service],
-                  Pacemaker::Resource::Service[$::cinder::params::volume_service]],
-    }
-
-    # Sahara
-    pacemaker::resource::service { $::sahara::params::api_service_name :
-      clone_params => 'interleave=true',
-      require      => Pacemaker::Resource::Ocf['openstack-core'],
-    }
-    pacemaker::resource::service { $::sahara::params::engine_service_name :
-      clone_params => 'interleave=true',
-    }
-    pacemaker::constraint::base { 'keystone-then-sahara-api-constraint':
-      constraint_type => 'order',
-      first_resource  => 'openstack-core-clone',
-      second_resource => "${::sahara::params::api_service_name}-clone",
-      first_action    => 'start',
-      second_action   => 'start',
-      require         => [Pacemaker::Resource::Service[$::sahara::params::api_service_name],
-                          Pacemaker::Resource::Ocf['openstack-core']],
-    }
-    pacemaker::constraint::base { 'sahara-api-then-sahara-engine-constraint':
-      constraint_type => 'order',
-      first_resource  => "${::sahara::params::api_service_name}-clone",
-      second_resource => "${::sahara::params::engine_service_name}-clone",
-      first_action    => 'start',
-      second_action   => 'start',
-      require         => [Pacemaker::Resource::Service[$::sahara::params::api_service_name],
-                          Pacemaker::Resource::Service[$::sahara::params::engine_service_name]],
-    }
-
-    # Glance
-    if $glance_backend == 'file' and hiera('glance_file_pcmk_manage', false) {
-      $secontext = 'context="system_u:object_r:glance_var_lib_t:s0"'
-      pacemaker::resource::filesystem { 'glance-fs':
-        device           => hiera('glance_file_pcmk_device'),
-        directory        => hiera('glance_file_pcmk_directory'),
-        fstype           => hiera('glance_file_pcmk_fstype'),
-        fsoptions        => join([$secontext, hiera('glance_file_pcmk_options', '')],','),
-        verify_on_create => true,
-        clone_params     => '',
-      }
-    }
-
-    pacemaker::resource::service { $::glance::params::registry_service_name :
-      clone_params => 'interleave=true',
-      require      => Pacemaker::Resource::Ocf['openstack-core'],
-    }
-    pacemaker::resource::service { $::glance::params::api_service_name :
-      clone_params => 'interleave=true',
-    }
-
-    pacemaker::constraint::base { 'keystone-then-glance-registry-constraint':
-      constraint_type => 'order',
-      first_resource  => 'openstack-core-clone',
-      second_resource => "${::glance::params::registry_service_name}-clone",
-      first_action    => 'start',
-      second_action   => 'start',
-      require         => [Pacemaker::Resource::Service[$::glance::params::registry_service_name],
-                          Pacemaker::Resource::Ocf['openstack-core']],
-    }
-    pacemaker::constraint::base { 'glance-registry-then-glance-api-constraint':
-      constraint_type => 'order',
-      first_resource  => "${::glance::params::registry_service_name}-clone",
-      second_resource => "${::glance::params::api_service_name}-clone",
-      first_action    => 'start',
-      second_action   => 'start',
-      require         => [Pacemaker::Resource::Service[$::glance::params::registry_service_name],
-                          Pacemaker::Resource::Service[$::glance::params::api_service_name]],
-    }
-    pacemaker::constraint::colocation { 'glance-api-with-glance-registry-colocation':
-      source  => "${::glance::params::api_service_name}-clone",
-      target  => "${::glance::params::registry_service_name}-clone",
-      score   => 'INFINITY',
-      require => [Pacemaker::Resource::Service[$::glance::params::registry_service_name],
-                  Pacemaker::Resource::Service[$::glance::params::api_service_name]],
-    }
 
     if hiera('step') == 5 {
       # Neutron
