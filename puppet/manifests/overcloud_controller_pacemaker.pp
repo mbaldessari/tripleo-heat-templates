@@ -501,7 +501,7 @@ if hiera('step') >= 4 {
   }
 
   class { '::nova' :
-    memcached_servers => $memcached_servers
+    memcached_servers => $memcached_servers,
     database_max_retries => -1,
   }
 
