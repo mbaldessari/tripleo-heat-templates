@@ -687,11 +687,6 @@ if hiera('step') >= 4 {
   }
 
   include ::cinder::config
-  cinder_config {
-    # Maximum retries in case of connection error or deadlock error before error is
-    # raised. Set to -1 to specify an infinite retry count.
-    'database/db_max_retries': value => -1;
-  }
 
   include ::tripleo::ssl::cinder_config
   class { '::cinder::api':
@@ -940,9 +935,6 @@ if hiera('step') >= 4 {
     sync_db             => $sync_db,
     notification_driver => 'messaging',
     database_max_retries => -1,
-  }
-  heat_config {
-    'database/db_max_retries': value => -1;
   }
 
   class { '::heat::api' :
