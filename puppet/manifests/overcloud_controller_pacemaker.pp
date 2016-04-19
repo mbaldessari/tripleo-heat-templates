@@ -506,9 +506,6 @@ if hiera('step') >= 4 {
   }
 
   include ::nova::config
-  nova_config {
-    'database/db_max_retries': value => -1;
-  }
 
   class { '::nova::api' :
     sync_db        => $sync_db,
