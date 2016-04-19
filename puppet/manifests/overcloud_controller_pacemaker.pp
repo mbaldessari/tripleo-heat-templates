@@ -145,13 +145,13 @@ if hiera('step') >= 1 {
     include ::mongodb::globals
     include ::mongodb::client
     class { '::mongodb::server' :
-      service_manage => false,
+      service_manage => true,
     }
   }
 
   # Memcached
   class {'::memcached' :
-    service_manage => false,
+    service_manage => true,
   }
 
   # Redis
