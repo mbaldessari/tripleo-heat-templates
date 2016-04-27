@@ -464,34 +464,6 @@ MYSQL_HOST=localhost\n",
 } #END STEP 2
 
 if hiera('step') >= 4 or ( hiera('step') >= 3 and $sync_db ) {
-  $glance_backend = downcase(hiera('glance_backend', 'swift'))
-  case $glance_backend {
-      'swift': { $backend_store = 'glance.store.swift.Store' }
-      'file': { $backend_store = 'glance.store.filesystem.Store' }
-      'rbd': { $backend_store = 'glance.store.rbd.Store' }
-      default: { fail('Unrecognized glance_backend parameter.') }
-  }
-  $http_store = ['glance.store.http.Store']
-  $glance_store = concat($http_store, $backend_store)
-
-  # TODO: notifications, scrubber, etc.
-  include ::glance
-  include ::glance::config
-  class { '::glance::api':
-    known_stores   => $glance_store,
-    manage_service => $non_pcmk_start,
-    enabled        => $non_pcmk_start,
-    database_max_retries => -1,
-  }
-  class { '::glance::registry' :
-    sync_db        => $sync_db,
-    manage_service => $non_pcmk_start,
-    enabled        => $non_pcmk_start,
-    database_max_retries => -1,
-  }
-  include ::glance::notify::rabbitmq
-  include join(['::glance::backend::', $glance_backend])
-
   $nova_ipv6 = hiera('nova::use_ipv6', false)
   if $nova_ipv6 {
     $memcached_servers = suffix(hiera('memcache_node_ips_v6'), ':11211')
@@ -959,6 +931,7 @@ if hiera('step') >= 4 or ( hiera('step') >= 3 and $sync_db ) {
     service_enable => true,
     service_manage => true, # <-- not supported with horizon&apache mod_wsgi?
   }
+  include ::apache::mod::remoteip
   include ::apache::mod::status
   if 'cisco_n1kv' in hiera('neutron::plugins::ml2::mechanism_drivers') {
     $_profile_support = 'cisco'
