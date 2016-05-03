@@ -1,0 +1,14 @@
+# An environment which enables configuration of an
+# Overcloud controller with Pacemaker.
+resource_registry:
+  OS::TripleO::ControllerConfig: ../puppet/controller-config-pacemaker-light.yaml
+  OS::TripleO::Tasks::ControllerPrePuppet: ../extraconfig/tasks/pre_puppet_pacemaker.yaml
+  OS::TripleO::Tasks::ControllerPostPuppet: ../extraconfig/tasks/post_puppet_pacemaker.yaml
+
+  # custom pacemaker services
+  # NOTE: For now we will need to specify overrides to all services
+  # which use pacemaker. In the future (with upcoming HA light work) this
+  # list will hopefully be much smaller however.
+  OS::TripleO::Services::Keystone: ../puppet/services/keystone.yaml
+  OS::TripleO::Services::GlanceApi: ../puppet/services/glance-api.yaml
+  OS::TripleO::Services::GlanceRegistry: ../puppet/services/glance-registry.yaml
