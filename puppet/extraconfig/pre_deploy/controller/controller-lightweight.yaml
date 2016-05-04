@@ -1,0 +1,38 @@
+heat_template_version: 2015-10-15
+
+description: Configure hieradata for Controllers with the lightweight architecture
+
+parameters:
+  server:
+    description: ID of the controller node to apply this config to
+    type: string
+
+  # Config specific parameters, to be provided via parameter_defaults
+  ControllerLightKeystoneDbMaxRetries:
+    type: number
+    default: -1
+
+resources:
+  ControllerLightConfig:
+    type: OS::Heat::StructuredConfig
+    properties:
+      group: os-apply-config
+      config:
+        hiera:
+          datafiles:
+            controller_lightweight:
+              mapped_data:
+                keystone::database_max_retries: {get_input: KeystoneDbMaxRetries}
+
+  ControllerLightDeployment:
+    type: OS::Heat::StructuredDeployment
+    properties:
+      config: {get_resource: ControllerLightConfig}
+      server: {get_param: server}
+      input_values:
+        KeystoneDbMaxRetries: {get_param: ControllerLightKeystoneDbMaxRetries}
+
+outputs:
+  deploy_stdout:
+    description: Deployment reference, used to trigger puppet apply on changes
+    value: {get_attr: [ControllerLightDeployment, deploy_stdout]}

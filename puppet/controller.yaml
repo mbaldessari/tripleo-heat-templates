@@ -1203,6 +1203,7 @@ resources:
             - controller_extraconfig
             - extraconfig
             - service_configs
+            - controller_lightweight
             - controller
             - database
             - object
