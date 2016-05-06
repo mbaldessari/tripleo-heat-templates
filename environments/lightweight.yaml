@@ -2,6 +2,3 @@
 # a Cinder  eqlx backen, configured via puppet
 resource_registry:
   OS::TripleO::ControllerExtraConfigPre: ../puppet/extraconfig/pre_deploy/controller/controller-lightweight.yaml
-
-parameter_defaults:
-  ControllerLightKeystoneDbMaxRetries: -1

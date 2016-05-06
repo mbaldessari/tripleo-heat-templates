@@ -11,6 +11,21 @@ parameters:
   ControllerLightKeystoneDbMaxRetries:
     type: number
     default: -1
+  ControllerLightGlanceApiDbMaxRetries:
+    type: number
+    default: -1
+  ControllerLightGlanceRegistryDbMaxRetries:
+    type: number
+    default: -1
+  ControllerLightNovaDbMaxRetries:
+    type: number
+    default: -1
+  ControllerLightCinderDbMaxRetries:
+    type: number
+    default: -1
+  ControllerLightHeatDbMaxRetries:
+    type: number
+    default: -1
 
 resources:
   ControllerLightConfig:
@@ -23,6 +38,11 @@ resources:
             controller_lightweight:
               mapped_data:
                 keystone::database_max_retries: {get_input: KeystoneDbMaxRetries}
+                glance::api::database_max_retries: {get_input: GlanceApiDbMaxRetries}
+                glance::registry::database_max_retries: {get_input: GlanceRegistryDbMaxRetries}
+                nova::database_max_retries: {get_input: NovaDbMaxRetries}
+                cinder::database_max_retries: {get_input: CinderDbMaxRetries}
+                heat::database_max_retries: {get_input: HeatDbMaxRetries}
 
   ControllerLightDeployment:
     type: OS::Heat::StructuredDeployment
@@ -31,6 +51,11 @@ resources:
       server: {get_param: server}
       input_values:
         KeystoneDbMaxRetries: {get_param: ControllerLightKeystoneDbMaxRetries}
+        GlanceApiDbMaxRetries: {get_param: ControllerLightGlanceApiDbMaxRetries}
+        GlanceRegistryDbMaxRetries: {get_param: ControllerLightGlanceRegistryDbMaxRetries}
+        NovaDbMaxRetries: {get_param: ControllerLightNovaDbMaxRetries}
+        CinderDbMaxRetries: {get_param: ControllerLightCinderDbMaxRetries}
+        HeatDbMaxRetries: {get_param: ControllerLightHeatDbMaxRetries}
 
 outputs:
   deploy_stdout:
