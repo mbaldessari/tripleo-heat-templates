@@ -29,6 +29,18 @@ parameters:
   ControllerLightNeutronDbMaxRetries:
     type: number
     default: -1
+  ControllerLightSaharaDbMaxRetries:
+    type: number
+    default: -1
+  ControllerLightAodhDbMaxRetries:
+    type: number
+    default: -1
+  ControllerLightCeilometerDbMaxRetries:
+    type: number
+    default: -1
+  ControllerLightManilaDbMaxRetries:
+    type: number
+    default: -1
 
 resources:
   ControllerLightConfig:
@@ -47,6 +59,10 @@ resources:
                 cinder::database_max_retries: {get_input: CinderDbMaxRetries}
                 heat::database_max_retries: {get_input: HeatDbMaxRetries}
                 neutron::server::database_max_retries: {get_input: NeutronDbMaxRetries}
+                sahara::database_max_retries: {get_input: SaharaDbMaxRetries}
+                aodh::database_max_retries: {get_input: AodhDbMaxRetries}
+                ceilometer::db::database_max_retries: {get_input: CeilometerDbMaxRetries}
+                manila::database_max_retries: {get_input: ManilaDbMaxRetries}
 
   ControllerLightDeployment:
     type: OS::Heat::StructuredDeployment
@@ -61,6 +77,10 @@ resources:
         CinderDbMaxRetries: {get_param: ControllerLightCinderDbMaxRetries}
         HeatDbMaxRetries: {get_param: ControllerLightHeatDbMaxRetries}
         NeutronDbMaxRetries: {get_param: ControllerLightNeutronDbMaxRetries}
+        SaharaDbMaxRetries: {get_param: ControllerLightSaharaDbMaxRetries}
+        AodhDbMaxRetries: {get_param: ControllerLightAodhDbMaxRetries}
+        CeilometerDbMaxRetries: {get_param: ControllerLightCeilometerDbMaxRetries}
+        ManilaDbMaxRetries: {get_param: ControllerLightManilaDbMaxRetries}
 
 outputs:
   deploy_stdout:
