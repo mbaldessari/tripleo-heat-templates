@@ -26,6 +26,9 @@ parameters:
   ControllerLightHeatDbMaxRetries:
     type: number
     default: -1
+  ControllerLightNeutronDbMaxRetries:
+    type: number
+    default: -1
 
 resources:
   ControllerLightConfig:
@@ -43,6 +46,7 @@ resources:
                 nova::database_max_retries: {get_input: NovaDbMaxRetries}
                 cinder::database_max_retries: {get_input: CinderDbMaxRetries}
                 heat::database_max_retries: {get_input: HeatDbMaxRetries}
+                neutron::server::database_max_retries: {get_input: NeutronDbMaxRetries}
 
   ControllerLightDeployment:
     type: OS::Heat::StructuredDeployment
@@ -56,6 +60,7 @@ resources:
         NovaDbMaxRetries: {get_param: ControllerLightNovaDbMaxRetries}
         CinderDbMaxRetries: {get_param: ControllerLightCinderDbMaxRetries}
         HeatDbMaxRetries: {get_param: ControllerLightHeatDbMaxRetries}
+        NeutronDbMaxRetries: {get_param: ControllerLightNeutronDbMaxRetries}
 
 outputs:
   deploy_stdout:
