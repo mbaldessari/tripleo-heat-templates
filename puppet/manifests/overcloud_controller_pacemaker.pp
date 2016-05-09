@@ -19,23 +19,21 @@ Pcmk_resource <| |> {
 }
 
 # TODO(jistr): use pcs resource provider instead of just no-ops
-#Service <|
-#  tag == 'aodh-service' or
-#  tag == 'cinder-service' or
-#  tag == 'ceilometer-service' or
-#  tag == 'glance-service' or
-#  tag == 'gnocchi-service' or
-#  tag == 'heat-service' or
-#  tag == 'keystone-service' or
-#  tag == 'neutron-service' or
-#  tag == 'nova-service' or
-#  tag == 'sahara-service'
-#|> {
-#  hasrestart => true,
-#  restart    => '/bin/true',
-#  start      => '/bin/true',
-#  stop       => '/bin/true',
-#}
+Service <|
+  tag == 'aodh-service' or
+  tag == 'cinder-service' or
+  tag == 'ceilometer-service' or
+  tag == 'gnocchi-service' or
+  tag == 'heat-service' or
+  tag == 'neutron-service' or
+  tag == 'nova-service' or
+  tag == 'sahara-service'
+|> {
+  hasrestart => true,
+  restart    => '/bin/true',
+  start      => '/bin/true',
+  stop       => '/bin/true',
+}
 
 include ::tripleo::packages
 include ::tripleo::firewall
@@ -369,12 +367,6 @@ MYSQL_HOST=localhost\n",
 
   # Create all the database schemas
   if $sync_db {
-    class { '::keystone::db::mysql':
-      require => Exec['galera-ready'],
-    }
-    class { '::glance::db::mysql':
-      require => Exec['galera-ready'],
-    }
     class { '::nova::db::mysql':
       require => Exec['galera-ready'],
     }
